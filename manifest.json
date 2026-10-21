@@ -1,0 +1,14 @@
+{
+  "name": "Quiet Sudoku",
+  "short_name": "Quiet Sudoku",
+  "description": "A free, untimed Sudoku game with offline play and explanatory hints.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f4ee",
+  "theme_color": "#173c32",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}
