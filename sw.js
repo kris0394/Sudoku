@@ -1,4 +1,4 @@
-const CACHE = 'quiet-sudoku-v3-aic';
+const CACHE = 'quiet-sudoku-v4-iterative';
 const FILES = ['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)));
