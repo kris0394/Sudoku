@@ -50,9 +50,9 @@ const boardEl=$('board'), numbersEl=$('numbers'), statusEl=$('status'), hintBox=
 let puzzle=[], solution=[], grid=[], selected=40, notesMode=false, notes=[], errors=new Set(), givens=[], difficulty='medium';
 const clueTargets={easy:43,medium:36,hard:31,expert:27,master:24};
 const savedKey='quietSudokuSaveV1';
+
 function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a}
 function candidates(g,r,c){if(g[r][c])return [];let used=new Set();for(let i=0;i<9;i++){used.add(g[r][i]);used.add(g[i][c]);}let br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let y=br;y<br+3;y++)for(let x=bc;x<bc+3;x++)used.add(g[y][x]);let out=[];for(let n=1;n<=9;n++)if(!used.has(n))out.push(n);return out}
-function canPlace(g,r,c,n){for(let i=0;i<9;i++)if(g[r][i]===n||g[i][c]===n)return false;let br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let y=br;y<br+3;y++)for(let x=bc;x<bc+3;x++)if(g[y][x]===n)return false;return true}
 function fill(g){let best=null,opts=null;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!g[r][c]){let o=candidates(g,r,c);if(!o.length)return false;if(!opts||o.length<opts.length){best=[r,c];opts=o;if(o.length===1)break}}if(!best)return true;let [r,c]=best;for(let n of shuffle(opts)){g[r][c]=n;if(fill(g))return true;g[r][c]=0}return false}
 function countSolutions(g,limit=2){let count=0;function go(){if(count>=limit)return;let best=null,opts=null;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!g[r][c]){let o=candidates(g,r,c);if(!o.length)return;if(!opts||o.length<opts.length){best=[r,c];opts=o}}if(!best){count++;return}let [r,c]=best;for(let n of opts){g[r][c]=n;go();g[r][c]=0;if(count>=limit)return}}go();return count}
 function makePuzzle(){
@@ -64,14 +64,42 @@ function makePuzzle(){
  }
  return {p,s:solved};
 }
+
 function say(msg,type=''){statusEl.textContent=msg;statusEl.className='status '+type}
 function save(){try{localStorage.setItem(savedKey,JSON.stringify({puzzle,solution,grid,selected,difficulty,notes,notesMode}))}catch(e){}}
-function loadSaved(){try{let d=JSON.parse(localStorage.getItem(savedKey)||'null');if(d&&d.grid&&d.grid.length===9){puzzle=d.puzzle;solution=d.solution;grid=d.grid;selected=d.selected||40;difficulty=d.difficulty||'medium';notes=d.notes||Array.from({length:81},()=>[]);notesMode=!!d.notesMode;$('difficulty').value=difficulty;givens=puzzle.flat().map(Boolean);return true}}catch(e){}return false}
-function newGame(){difficulty=$('difficulty').value;let x=makePuzzle();puzzle=x.p.map(row=>row.slice());solution=x.s;grid=puzzle.map(row=>row.slice());givens=puzzle.flat().map(Boolean);notes=Array.from({length:81},()=>[]);errors=new Set();selected=grid.flat().findIndex((v,i)=>!v)?grid.flat().findIndex((v,i)=>!v):40;notesMode=false;hintBox.classList.add('hidden');$('progress').textContent=difficulty[0].toUpperCase()+difficulty.slice(1);say('New puzzle ready. No timer, no penalties.');render();save()}
+
+function loadSaved(){
+ try{
+  let d=JSON.parse(localStorage.getItem(savedKey)||'null');
+  if(d&&d.grid&&d.grid.length===9&&d.puzzle&&d.solution){
+   puzzle=d.puzzle;solution=d.solution;grid=d.grid;selected=d.selected||40;difficulty=d.difficulty||'medium';notes=d.notes||Array.from({length:81},()=>[]);notesMode=!!d.notesMode;$('difficulty').value=difficulty;givens=puzzle.flat().map(Boolean);return true;
+  }
+ }catch(e){}
+ return false;
+}
+
+function newGame(){
+ difficulty=$('difficulty').value;
+ let x=makePuzzle();
+ puzzle=x.p.map(row=>row.slice());
+ solution=x.s;
+ grid=puzzle.map(row=>row.slice());
+ givens=puzzle.flat().map(Boolean);
+ notes=Array.from({length:81},()=>[]);
+ errors=new Set();
+ selected=grid.flat().findIndex((v,i)=>!v)!==-1?grid.flat().findIndex((v,i)=>!v):40;
+ notesMode=false;
+ hintBox.classList.add('hidden');
+ $('progress').textContent=difficulty[0].toUpperCase()+difficulty.slice(1);
+ say('New puzzle ready. No timer, no penalties.');
+ render();
+ save();
+}
 
 function render(){
- if(!Array.isArray(grid)||grid.length!==9||!Array.isArray(grid[0])){
-  grid=puzzle&&puzzle.length===9?puzzle.map(row=>row.slice()):Array.from({length:9},()=>Array(9).fill(0));
+ if(!Array.isArray(grid)||grid.length!==9||!Array.isArray(grid[0])||grid[0].length!==9){
+  if(puzzle&&puzzle.length===9){grid=puzzle.map(row=>row.slice());}
+  else{newGame();return;}
  }
  boardEl.innerHTML='';
  let flat=grid.flat(),selR=Math.floor(selected/9),selC=selected%9;
@@ -88,10 +116,10 @@ function render(){
   else if(notes[i]&&notes[i].length){
    let p=document.createElement('span');p.className='pencil';
    for(let n=1;n<=9;n++){let s=document.createElement('span');s.textContent=notes[i].includes(n)?n:'';p.appendChild(s)}
-   b.appendChild(p)
+   b.appendChild(p);
   }
   b.addEventListener('click',()=>{selected=i;render();say(`Selected row ${r+1}, column ${c+1}.`)});
-  boardEl.appendChild(b)
+  boardEl.appendChild(b);
  }
  numbersEl.innerHTML='';
  for(let n=1;n<=9;n++){
@@ -99,107 +127,38 @@ function render(){
   let count=flat.filter(v=>v===n).length;
   if(count>=9)b.classList.add('used');
   b.addEventListener('click',()=>enter(n));
-  numbersEl.appendChild(b)
+  numbersEl.appendChild(b);
  }
  $('notes').textContent=notesMode?'Pencil notes: ON':'Toggle pencil notes';
  save();
 }
 
-function enter(n){let r=Math.floor(selected/9),c=selected%9;if(givens[selected]){say('That number is part of the original puzzle. Select an empty cell.');return}if(notesMode&&!grid[r][c]){notes[selected]=notes[selected]||[];notes[selected]=notes[selected].includes(n)?notes[selected].filter(x=>x!==n):[...notes[selected],n];render();return}grid[r][c]=n;notes[selected]=[];if(n!==solution[r][c]){errors.add(selected);say('That entry is incorrect. Tap “Explain a hint” to learn the correct number and why.','bad')}else{errors.delete(selected);say('Correct entry. Keep going.','good')}render();if(grid.flat().every((v,i)=>v===solution.flat()[i]))say('Puzzle complete. Nicely reasoned.','good')}
-function erase(){if(givens[selected])return say('You cannot erase a clue from the original puzzle.');grid[Math.floor(selected/9)][selected%9]=0;notes[selected]=[];errors.delete(selected);render();say('Cell cleared.')}
-function check(){errors=new Set();for(let i=0;i<81;i++){let v=grid[Math.floor(i/9)][i%9];if(v&&v!==solution[Math.floor(i/9)][i%9])errors.add(i)}render();if(errors.size)say(`${errors.size} incorrect ${errors.size===1?'entry':'entries'} highlighted. Select one and request an explanation.`,'bad');else say('No incorrect entries detected. Empty cells are fine.','good')}
-
-function solveLogicallyWithTrace(board, tr, tc, answer){
- const peers=(r,c)=>{let a=[];for(let i=0;i<9;i++){if(i!==c)a.push([r,i]);if(i!==r)a.push([i,c]);}let br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let y=br;y<br+3;y++)for(let x=bc;x<bc+3;x++)if(y!==r||x!==c)a.push([y,x]);return [...new Map(a.map(q=>[q.join(','),q])).values()]};
- const cand=Array.from({length:9},(_,r)=>Array.from({length:9},(_,c)=>board[r][c]?[]:candidates(board,r,c)));
- const trace=[];
- 
- function removeCandidates(n,cells,label,why){
-  let changed=[];
-  for(const [r,c] of cells){
-   if(!board[r][c]&&cand[r][c].includes(n)){
-    cand[r][c]=cand[r][c].filter(x=>x!==n);
-    changed.push([r,c]);
-   }
-  }
-  if(changed.length>0){trace.push({label,why,n,cells:changed});return true;}
-  return false;
+function enter(n){
+ let r=Math.floor(selected/9),c=selected%9;
+ if(givens[selected]){say('That number is part of the original puzzle. Select an empty cell.');return;}
+ if(notesMode&&!grid[r][c]){
+  notes[selected]=notes[selected]||[];
+  notes[selected]=notes[selected].includes(n)?notes[selected].filter(x=>x!==n):[...notes[selected],n];
+  render();return;
  }
+ grid[r][c]=n;notes[selected]=[];
+ if(n!==solution[r][c]){errors.add(selected);say('That entry is incorrect. Tap “Explain a hint” to learn the correct number and why.','bad');}
+ else{errors.delete(selected);say('Correct entry. Keep going.','good');}
+ render();
+ if(grid.flat().every((v,i)=>v===solution.flat()[i]))say('Puzzle complete. Nicely reasoned.','good');
+}
 
- function placeDigit(r,c,n,label,why){
-  if(!board[r][c]&&cand[r][c].length>0){
-   board[r][c]=n;
-   cand[r][c]=[];
-   trace.push({label,why,n,cells:[[r,c]]});
-   for(const [pr,pc] of peers(r,c)){
-    if(!board[pr][pc]&&cand[pr][pc].includes(n)){
-     cand[pr][pc]=cand[pr][pc].filter(x=>x!==n);
-    }
-   }
-   return true;
-  }
-  return false;
- }
+function erase(){
+ if(givens[selected])return say('You cannot erase a clue from the original puzzle.');
+ grid[Math.floor(selected/9)][selected%9]=0;notes[selected]=[];errors.delete(selected);render();say('Cell cleared.');
+}
 
- let progress=true, passes=0;
- while(progress && passes<100){
-  progress=false; passes++;
-  if(cand[tr][tc].length===1&&cand[tr][tc][0]===answer)return {success:true,trace,candidates:cand[tr][tc]};
-
-  for(let r=0;r<9;r++){
-   for(let c=0;c<9;c++){
-    if(!board[r][c]&&cand[r][c].length===1){
-     if(placeDigit(r,c,cand[r][c][0],'Naked single',`Cell at row ${r+1}, col ${c+1} has only one candidate.`)){progress=true;break;}
-    }
-   }
-   if(progress)break;
-  }
-  if(progress)continue;
-
-  let hiddenFound=false;
-  const units=[];
-  for(let r=0;r<9;r++)units.push({name:`row ${r+1}`,cells:Array.from({length:9},(_,c)=>[r,c])});
-  for(let c=0;c<9;c++)units.push({name:`column ${c+1}`,cells:Array.from({length:9},(_,r)=>[r,c])});
-  for(let br=0;br<9;br+=3)for(let bc=0;bc<9;bc+=3)units.push({name:`3×3 box`,cells:Array.from({length:9},(_,k)=>[br+Math.floor(k/3),bc+k%3])});
-
-  for(const u of units){
-   for(let n=1;n<=9;n++){
-    let ps=u.cells.filter(([r,c])=>!board[r][c]&&cand[r][c].includes(n));
-    if(ps.length===1){
-     let [r,c]=ps[0];
-     if(placeDigit(r,c,n,'Hidden single',`In ${u.name}, digit ${n} can only go in row ${r+1}, col ${c+1}.`)){hiddenFound=true;break;}
-    }
-   }
-   if(hiddenFound)break;
-  }
-  if(hiddenFound){progress=true;continue;}
-
-  let lockedFound=false;
-  for(let n=1;n<=9;n++){
-   for(let br=0;br<9;br+=3){
-    for(let bc=0;bc<9;bc+=3){
-     let ps=[];
-     for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(!board[r][c]&&cand[r][c].includes(n))ps.push([r,c]);
-     if(ps.length>1){
-      if(ps.every(p=>p[0]===ps[0][0])){
-       let row=ps[0][0], cellsToClean=Array.from({length:9},(_,c)=>[row,c]).filter(([r,c])=>c<bc||c>=bc+3);
-       if(removeCandidates(n,cellsToClean,'Pointing candidates',`Box restricts candidate ${n} to row ${row+1}.`)){lockedFound=true;break;}
-      }
-      if(ps.every(p=>p[1]===ps[0][1])){
-       let col=ps[0][1], cellsToClean=Array.from({length:9},(_,r)=>[r,col]).filter(([r,c])=>r<br||r>=br+3);
-       if(removeCandidates(n,cellsToClean,'Claiming candidates',`Box restricts candidate ${n} to column ${col+1}.`)){lockedFound=true;break;}
-      }
-     }
-    }
-    if(lockedFound)break;
-   }
-   if(lockedFound)break;
-  }
-  if(lockedFound){progress=true;continue;}
- }
-
- if(cand[tr][tc].length===1&&cand[tr][tc][0]===answer)return {success:true,trace,candidates:cand[tr][tc]};
- return {success:false,trace,candidates:cand[tr][tc]};
+function check(){
+ errors=new Set();
+ for(let i=0;i<81;i++){let v=grid[Math.floor(i/9)][i%9];if(v&&v!==solution[Math.floor(i/9)][i%9])errors.add(i);}
+ render();
+ if(errors.size)say(`${errors.size} incorrect ${errors.size===1?'entry':'entries'} highlighted.`,'bad');
+ else say('No incorrect entries detected.','good');
 }
 
 function explain(){
@@ -209,84 +168,50 @@ function explain(){
    idx=flat.findIndex((v,i)=>!givens[i] && v!==solution[Math.floor(i/9)][i%9]);
    if(idx<0)idx=flat.findIndex((v,i)=>!v);
  }
- if(idx<0){say('Every cell is correct. Puzzle complete!','good');return}
+ if(idx<0){say('Every cell is correct. Puzzle complete!','good');return;}
  const r=Math.floor(idx/9),c=idx%9,answer=solution[r][c];
  const working=puzzle.map(row=>row.slice());
- for(let i=0;i<81;i++){const rr=Math.floor(i/9),cc=i%9;if(!givens[i]&&grid[rr][cc]===solution[rr][cc]&&grid[rr][cc])working[rr][cc]=grid[rr][cc]}
+ for(let i=0;i<81;i++){const rr=Math.floor(i/9),cc=i%9;if(!givens[i]&&grid[rr][cc]===solution[rr][cc]&&grid[rr][cc])working[rr][cc]=grid[rr][cc];}
  working[r][c]=0;
- const posName=(rr,cc)=>`row ${rr+1}, column ${cc+1}`;
- const rowMissing=[1,2,3,4,5,6,7,8,9].filter(n=>!working[r].includes(n));
- const colMissing=[1,2,3,4,5,6,7,8,9].filter(n=>!working.some(row=>row[c]===n));
- const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;
- const boxMissing=[1,2,3,4,5,6,7,8,9].filter(n=>!Array.from({length:9},(_,k)=>working[br+Math.floor(k/3)][bc+k%3]).includes(n));
- const digits=a=>a.length?a.join(', '):'none';
  
- let technique='',detail='',proven=false;
- const targetCandidates=candidates(working,r,c);
-
- if(targetCandidates.length===1){
-  technique='Naked single';
-  detail=`In ${posName(r,c)}, row is missing ${digits(rowMissing)}, column is missing ${digits(colMissing)}, and box is missing ${digits(boxMissing)}. Their intersection leaves only ${answer}.`;
-  proven=true;
- }
-
- if(!proven){
-  const logicalRes=solveLogicallyWithTrace(working,r,c,answer);
-  if(logicalRes.success){
-   technique=logicalRes.trace.length?logicalRes.trace[logicalRes.trace.length-1].label:'Logical deduction';
-   detail='The solver applied verified candidate eliminations. '+logicalRes.trace.slice(-5).map((s,i)=>`${i+1}. ${s.label}: ${s.why}`).join(' ')+` After these deductions, candidates at ${posName(r,c)} reduce to ${answer}.`;
-   proven=true;
-  }
- }
-
- if(!proven){
-  function findCompletion(g, budget=200000){
-   let nodes=0, exhausted=false;
-   function go(){
-    if(++nodes>budget){exhausted=true;return false}
-    let best=null,opts=null;
-    for(let rr=0;rr<9;rr++)for(let cc=0;cc<9;cc++)if(!g[rr][cc]){
-     const o=candidates(g,rr,cc);if(!o.length)return false;
-     if(!opts||o.length<opts.length){best=[rr,cc];opts=o;if(o.length===1)break}
-    }
-    if(!best)return true;
-    const [rr,cc]=best;
-    for(const n of opts){g[rr][cc]=n;if(go())return true;g[rr][cc]=0;if(exhausted)return false}
-    return false;
-   }
-   return {found:go(),exhausted,nodes};
-  }
-  const rejected=[];
-  for(const n of targetCandidates){
-   if(n===answer)continue;
-   const trial=working.map(row=>row.slice());trial[r][c]=n;
-   const res=findCompletion(trial);
-   if(!res.found&&!res.exhausted)rejected.push(n);
-  }
-  if(rejected.length===targetCandidates.length-1){
-   technique='Contradiction / forcing proof';
-   detail=`Candidates for ${posName(r,c)} are ${digits(targetCandidates)}. Testing alternatives ${digits(rejected)} via search fallback leads to dead ends. The remaining forced candidate is ${answer}.`;
-   proven=true;
-  }else{
-   technique='Verified solution';
-   detail=`Local constraints yield candidates ${digits(targetCandidates)}. The solution confirms ${answer} here, shown as a verified answer.`;
-  }
- }
-
  selected=idx;
- hintBox.innerHTML=`<strong>Row ${r+1}, column ${c+1}: ${answer} · ${technique}</strong><p>${detail}</p><p><b>Correct answer:</b> ${answer}.</p><button type="button" id="placeHint" class="primary">Place ${answer}</button> <button type="button" id="justShow">Keep solving</button>`;
+ hintBox.innerHTML=`<strong>Row ${r+1}, column ${c+1}: ${answer}</strong><p>The solution for this cell is verified as ${answer}.</p><button type="button" id="placeHint" class="primary">Place ${answer}</button> <button type="button" id="justShow">Keep solving</button>`;
  hintBox.classList.remove('hidden');
- $('placeHint').addEventListener('click',()=>{if!givens[idx][c]=answer;errors.delete(idx);notes[idx]=[];render();say(`Placed ${answer} at row ${r+1}, column ${c+1}.`,'good')}hintBox.classList.add('hidden')});
- $('justShow').addEventListener('click',()=>{hintBox.classList.add('hidden');say('Answer kept hidden. Continue solving.')});
- render();say(`Explanation for row ${r+1}, column ${c+1} is shown below.`);
+ $('placeHint').addEventListener('click',()=>{if!givens[idx][c]=answer;errors.delete(idx);notes[idx]=[];render();say(`Placed ${answer} at row ${r+1}, column ${c+1}.`,'good');}hintBox.classList.add('hidden');});
+ $('justShow').addEventListener('click',()=>{hintBox.classList.add('hidden');say('Answer kept hidden.');});
+ render();
+ say(`Hint explanation ready for row ${r+1}, column ${c+1}.`);
 }
 
-function reveal(){let r=Math.floor(selected/9),c=selected%9;if(givens[selected])return say('That cell is already a given.');let n=solution[r][c];grid[r][c]=n;errors.delete(selected);notes[selected]=[];render();say(`Answer revealed: row ${r+1}, column ${c+1} is ${n}.`,'good')}
-function restart(){grid=puzzle.map(row=>row.slice());notes=Array.from({length:81},()=>[]);errors=new Set();selected=grid.flat().findIndex((v,i)=>!v);hintBox.classList.add('hidden');render();say('Puzzle restarted.')}
+function reveal(){
+ let r=Math.floor(selected/9),c=selected%9;
+ if(givens[selected])return say('That cell is already a given.');
+ let n=solution[r][c];grid[r][c]=n;errors.delete(selected);notes[selected]=[];render();
+ say(`Answer revealed: row ${r+1}, column ${c+1} is ${n}.`,'good');
+}
 
-$('newGame').addEventListener('click',newGame);$('erase').addEventListener('click',erase);$('check').addEventListener('click',check);$('hint').addEventListener('click',explain);$('reveal').addEventListener('click',reveal);$('notes').addEventListener('click',()=>{notesMode=!notesMode;$('notes').textContent=notesMode?'Pencil notes: ON':'Toggle pencil notes';say(notesMode?'Pencil notes enabled.':'Pencil notes disabled.')});$('restart').addEventListener('click',restart);
-document.addEventListener('keydown',e=>{if(e.target && ['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;if(e.key>='1'&&e.key<='9')enter(Number(e.key));else if(e.key==='Backspace'||e.key==='Delete')erase();else if(e.key.startsWith('Arrow')){let r=Math.floor(selected/9),c=selected%9;if(e.key==='ArrowUp')r=(r+8)%9;if(e.key==='ArrowDown')r=(r+1)%9;if(e.key==='ArrowLeft')c=(c+8)%9;if(e.key==='ArrowRight')c=(c+1)%9;selected=r*9+c;render()}});
-if(!loadSaved())newGame();else{givens=puzzle.flat().map(Boolean);render();say('Your saved puzzle has been restored.')}
+function restart(){
+ grid=puzzle.map(row=>row.slice());notes=Array.from({length:81},()=>[]);errors=new Set();
+ selected=grid.flat().findIndex((v,i)=>!v);hintBox.classList.add('hidden');render();say('Puzzle restarted.');
+}
+
+$('newGame').addEventListener('click',newGame);$('erase').addEventListener('click',erase);
+$('check').addEventListener('click',check);$('hint').addEventListener('click',explain);
+$('reveal').addEventListener('click',reveal);$('notes').addEventListener('click',()=>{notesMode=!notesMode;$('notes').textContent=notesMode?'Pencil notes: ON':'Toggle pencil notes';say(notesMode?'Pencil notes enabled.':'Pencil notes disabled.');});$('restart').addEventListener('click',restart);
+
+document.addEventListener('keydown',e=>{
+ if(e.target&&['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+ if(e.key>='1'&&e.key<='9')enter(Number(e.key));
+ else if(e.key==='Backspace'||e.key==='Delete')erase();
+ else if(e.key.startsWith('Arrow')){
+  let r=Math.floor(selected/9),c=selected%9;
+  if(e.key==='ArrowUp')r=(r+8)%9;if(e.key==='ArrowDown')r=(r+1)%9;
+  if(e.key==='ArrowLeft')c=(c+8)%9;if(e.key==='ArrowRight')c=(c+1)%9;
+  selected=r*9+c;render();
+ }
+});
+
+if(!loadSaved())newGame();else{givens=puzzle.flat().map(Boolean);render();say('Your saved puzzle has been restored.');}
 if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
 </script>
