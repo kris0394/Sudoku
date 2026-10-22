@@ -171,16 +171,15 @@ function advancedProof(board,tr,tc,answer){
 // encode mutual exclusion; strong links encode that at least one endpoint must hold.
 function aicProof(board,tr,tc,answer){
   if(!validPartial(board)||!Number.isInteger(tr)||!Number.isInteger(tc)||tr<0||tr>8||tc<0||tc>8||!Number.isInteger(answer)||answer<1||answer>9)return null;
-  // Rebuild the implication graph after every verified elimination. This is
-  // essential: a newly bivalue cell or two-position unit can create new links.
   const cand=Array.from({length:9},(_,r)=>Array.from({length:9},(_,c)=>board[r][c]?[]:candidates(board,r,c)));
   if(!cand[tr][tc].includes(answer))return null;
   const id=(r,c,n)=>(r*9+c)*9+(n-1), node=(candidate,truth)=>candidate*2+(truth?1:0);
+  const decode=k=>{const n=k%9+1,cell=Math.floor(k/9);return {r:Math.floor(cell/9),c:cell%9,n};};
   const units=[];
   for(let r=0;r<9;r++)units.push({name:`row ${r+1}`,cells:Array.from({length:9},(_,c)=>[r,c])});
   for(let c=0;c<9;c++)units.push({name:`column ${c+1}`,cells:Array.from({length:9},(_,r)=>[r,c])});
   for(let br=0;br<9;br+=3)for(let bc=0;bc<9;bc+=3)units.push({name:`box ${Math.floor(br/3)+1},${Math.floor(bc/3)+1}`,cells:Array.from({length:9},(_,k)=>[br+Math.floor(k/3),bc+k%3])});
-  const peer=(r,c,y,x)=>r===y||c===x||(Math.floor(r/3)===Math.floor(y/3)&&Math.floor(c/3)===Math.floor(x/3));
+  const peers=(r,c,y,x)=>r===y||c===x||(Math.floor(r/3)===Math.floor(y/3)&&Math.floor(c/3)===Math.floor(x/3));
   function consistent(){
     for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!board[r][c]&&!cand[r][c].length)return false;
     for(const u of units)for(let n=1;n<=9;n++){
@@ -189,22 +188,47 @@ function aicProof(board,tr,tc,answer){
     }
     return true;
   }
+  // Independently verify each implication in a found chain against the current
+  // candidate state. A true -> false edge must be a genuine weak link. A
+  // false -> true edge must be a genuine strong link with exactly two options.
+  function verifyEdge(from,to){
+    const aTruth=!!(from%2),bTruth=!!(to%2),a=decode(Math.floor(from/2)),b=decode(Math.floor(to/2));
+    if(aTruth&&!bTruth){
+      if(a.r===b.r&&a.c===b.c&&a.n!==b.n&&cand[a.r][a.c].includes(a.n)&&cand[b.r][b.c].includes(b.n))
+        return `Weak link: row ${a.r+1}, column ${a.c+1} cannot contain both candidates ${a.n} and ${b.n}.`;
+      if(a.n===b.n&&peers(a.r,a.c,b.r,b.c)&&cand[a.r][a.c].includes(a.n)&&cand[b.r][b.c].includes(b.n)){
+        const u=units.find(u=>u.cells.some(([r,c])=>r===a.r&&c===a.c)&&u.cells.some(([r,c])=>r===b.r&&c===b.c));
+        if(u)return `Weak link: digit ${a.n} cannot occur twice in the same ${u.name}.`;
+      }
+      return null;
+    }
+    if(!aTruth&&bTruth){
+      if(a.r===b.r&&a.c===b.c&&a.n!==b.n&&cand[a.r][a.c].length===2&&cand[a.r][a.c].includes(a.n)&&cand[b.r][b.c].includes(b.n))
+        return `Strong link: row ${a.r+1}, column ${a.c+1} has exactly two candidates (${cand[a.r][a.c].join(', ')}).`;
+      if(a.n===b.n&&cand[a.r][a.c].includes(a.n)&&cand[b.r][b.c].includes(b.n)){
+        const u=units.find(u=>u.cells.some(([r,c])=>r===a.r&&c===a.c)&&u.cells.some(([r,c])=>r===b.r&&c===b.c)&&u.cells.filter(([r,c])=>!board[r][c]&&cand[r][c].includes(a.n)).length===2);
+        if(u)return `Strong link: ${u.name} has exactly two possible locations for digit ${a.n} (${`r${a.r+1}c${a.c+1}`} and ${`r${b.r+1}c${b.c+1}`}).`;
+      }
+      return null;
+    }
+    return null;
+  }
   function buildGraph(){
-    const total=81*9*2,adj=Array.from({length:total},()=>[]),meta=new Map();
-    const edge=(a,b,why)=>{adj[a].push(b);meta.set(a+','+b,why)};
-    const weak=(a,b,why)=>{edge(node(a,true),node(b,false),why);edge(node(b,true),node(a,false),why)};
-    const strong=(a,b,why)=>{edge(node(a,false),node(b,true),why);edge(node(b,false),node(a,true),why)};
+    const total=81*9*2,adj=Array.from({length:total},()=>[]);
+    const edge=(a,b)=>{adj[a].push(b);};
+    const weak=(a,b)=>{edge(node(a,true),node(b,false));edge(node(b,true),node(a,false));};
+    const strong=(a,b)=>{edge(node(a,false),node(b,true));edge(node(b,false),node(a,true));};
     for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!board[r][c]){
       const ns=cand[r][c].map(n=>id(r,c,n));
-      for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++)weak(ns[i],ns[j],`Weak link: row ${r+1}, column ${c+1} cannot contain both candidates.`);
-      if(ns.length===2)strong(ns[0],ns[1],`Strong link: row ${r+1}, column ${c+1} has exactly two candidates.`);
+      for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++)weak(ns[i],ns[j]);
+      if(ns.length===2)strong(ns[0],ns[1]);
     }
     for(let n=1;n<=9;n++)for(const u of units){
       const ps=u.cells.filter(([r,c])=>!board[r][c]&&cand[r][c].includes(n)).map(([r,c])=>id(r,c,n));
-      for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++)weak(ps[i],ps[j],`Weak link: digit ${n} cannot occur twice in the same ${u.name}.`);
-      if(ps.length===2)strong(ps[0],ps[1],`Strong link: ${u.name} has exactly two possible locations for digit ${n}.`);
+      for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++)weak(ps[i],ps[j]);
+      if(ps.length===2)strong(ps[0],ps[1]);
     }
-    return {adj,meta};
+    return adj;
   }
   function findPath(adj,start,end){
     const parent=new Int32Array(adj.length);parent.fill(-1);const q=[start];parent[start]=start;
@@ -212,32 +236,40 @@ function aicProof(board,tr,tc,answer){
     if(parent[end]===-1)return null;
     const path=[];for(let x=end;;x=parent[x]){path.push(x);if(x===start)break;}return path.reverse();
   }
-  const literalText=v=>{const truth=!!(v%2),k=Math.floor(v/2),n=k%9+1,cell=Math.floor(k/9);return `r${Math.floor(cell/9)+1}c${cell%9+1}(${n}) ${truth?'true':'false'}`};
+  const literalText=v=>{const truth=!!(v%2),k=Math.floor(v/2),n=k%9+1,cell=Math.floor(k/9);return `r${Math.floor(cell/9)+1}c${cell%9+1}(${n}) ${truth?'true':'false'}`;};
+  function verifiedPath(path){
+    if(!path||path.length<2)return null;
+    const links=[];
+    for(let i=1;i<path.length;i++){const why=verifyEdge(path[i-1],path[i]);if(!why)return null;links.push(`${literalText(path[i-1])} → ${literalText(path[i])}: ${why}`);}
+    const first=Math.floor(path[0]/2),last=Math.floor(path[path.length-1]/2);
+    if(path[0]%2!==1||path[path.length-1]%2!==0||first!==last)return null;
+    return links;
+  }
   const traces=[];
-  // A bounded loop prevents pathological invalid states from monopolizing the UI.
+  // Every elimination is proved on the current graph, independently checked
+  // edge by edge, applied only if the candidate state remains consistent, then
+  // the graph is rebuilt before another deduction is attempted.
   for(let round=0;round<729;round++){
     if(!consistent())return null;
-    const {adj,meta}=buildGraph();let applied=false;
-    // Test one candidate at a time, then rebuild all links from the changed state.
+    const adj=buildGraph();let applied=false;
     for(let r=0;r<9&&!applied;r++)for(let c=0;c<9&&!applied;c++)if(!board[r][c]){
       for(const n of [...cand[r][c]]){
         const cid=id(r,c,n),path=findPath(adj,node(cid,true),node(cid,false));
-        if(!path)continue;
+        const links=verifiedPath(path);if(!links)continue;
         const before=cand[r][c].slice();cand[r][c]=cand[r][c].filter(v=>v!==n);
         if(!consistent()){cand[r][c]=before;continue;}
-        traces.push({r,c,n,path,links:path.slice(1).map((v,i)=>meta.get(path[i]+','+v)||'Verified implication')});
-        applied=true;break;
+        traces.push({r,c,n,path,links});applied=true;break;
       }
     }
     if(!applied)break;
     if(cand[tr][tc].length===1&&cand[tr][tc][0]===answer){
       const relevant=traces.filter(t=>t.r===tr&&t.c===tc);
-      if(relevant.length)return {rejected:relevant.map(t=>t.n),traces:relevant,remaining:answer,describe(){return relevant.map(t=>`Assuming candidate ${t.n} at row ${tr+1}, column ${tc+1} is true, the verified implication chain ${t.path.map(literalText).join(' → ')} reaches the same candidate being false. Therefore ${t.n} is eliminated. Links: ${t.links.join(' | ')}`).join(' ');}};
+      if(relevant.length)return {rejected:relevant.map(t=>t.n),traces:relevant,remaining:answer,describe(){return relevant.map(t=>`Assuming candidate ${t.n} at row ${tr+1}, column ${tc+1} is true, the independently verified implication chain ${t.path.map(literalText).join(' → ')} returns to the same candidate as false. Therefore ${t.n} is eliminated. Verified links: ${t.links.join(' | ')}.`).join(' ');}};
     }
   }
   if(cand[tr][tc].length===1&&cand[tr][tc][0]===answer){
     const relevant=traces.filter(t=>t.r===tr&&t.c===tc);
-    if(relevant.length)return {rejected:relevant.map(t=>t.n),traces:relevant,remaining:answer,describe(){return relevant.map(t=>`Assuming candidate ${t.n} at row ${tr+1}, column ${tc+1} is true, the verified implication chain ${t.path.map(literalText).join(' → ')} reaches the same candidate being false. Therefore ${t.n} is eliminated. Links: ${t.links.join(' | ')}`).join(' ');}};
+    if(relevant.length)return {rejected:relevant.map(t=>t.n),traces:relevant,remaining:answer,describe(){return relevant.map(t=>`Assuming candidate ${t.n} at row ${tr+1}, column ${tc+1} is true, the independently verified implication chain ${t.path.map(literalText).join(' → ')} returns to the same candidate as false. Therefore ${t.n} is eliminated. Verified links: ${t.links.join(' | ')}.`).join(' ');}};
   }
   return null;
 }
