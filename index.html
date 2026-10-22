@@ -53,8 +53,38 @@ const savedKey='quietSudokuSaveV1';
 function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a}
 function candidates(g,r,c){if(g[r][c])return [];let used=new Set();for(let i=0;i<9;i++){used.add(g[r][i]);used.add(g[i][c]);}let br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let y=br;y<br+3;y++)for(let x=bc;x<bc+3;x++)used.add(g[y][x]);let out=[];for(let n=1;n<=9;n++)if(!used.has(n))out.push(n);return out}
 function canPlace(g,r,c,n){for(let i=0;i<9;i++)if(g[r][i]===n||g[i][c]===n)return false;let br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let y=br;y<br+3;y++)for(let x=bc;x<bc+3;x++)if(g[y][x]===n)return false;return true}
+// Reject malformed or contradictory starting boards before counting solutions.
+// Backtracking alone can otherwise accept a grid whose already-filled clues conflict.
+function validPartial(g){
+ if(!Array.isArray(g)||g.length!==9||g.some(row=>!Array.isArray(row)||row.length!==9))return false;
+ for(let r=0;r<9;r++)for(let c=0;c<9;c++){const n=g[r][c];if(!Number.isInteger(n)||n<0||n>9)return false;if(!n)continue;
+  for(let i=0;i<9;i++)if(i!==c&&g[r][i]===n)return false;
+  for(let i=0;i<9;i++)if(i!==r&&g[i][c]===n)return false;
+  const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let y=br;y<br+3;y++)for(let x=bc;x<bc+3;x++)if((y!==r||x!==c)&&g[y][x]===n)return false;
+ }
+ return true;
+}
 function fill(g){let best=null,opts=null;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!g[r][c]){let o=candidates(g,r,c);if(!o.length)return false;if(!opts||o.length<opts.length){best=[r,c];opts=o;if(o.length===1)break}}if(!best)return true;let [r,c]=best;for(let n of shuffle(opts)){g[r][c]=n;if(fill(g))return true;g[r][c]=0}return false}
-function countSolutions(g,limit=2){let count=0;function go(){if(count>=limit)return;let best=null,opts=null;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!g[r][c]){let o=candidates(g,r,c);if(!o.length)return;if(!opts||o.length<opts.length){best=[r,c];opts=o}}if(!best){count++;return}let [r,c]=best;for(let n of opts){g[r][c]=n;go();g[r][c]=0;if(count>=limit)return}}go();return count}
+function countSolutions(g,limit=2){if(!validPartial(g))return 0;let count=0;function go(){if(count>=limit)return;let best=null,opts=null;for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!g[r][c]){let o=candidates(g,r,c);if(!o.length)return;if(!opts||o.length<opts.length){best=[r,c];opts=o}}if(!best){count++;return}let [r,c]=best;for(let n of opts){g[r][c]=n;go();g[r][c]=0;if(count>=limit)return}}go();return count}
+// Bounded completion search reports exhaustion separately from contradiction.
+// A budget limit is not evidence that a candidate is impossible.
+function findCompletion(g,budget=200000){
+ if(!validPartial(g))return {found:false,exhausted:false,nodes:0};
+ let nodes=0,exhausted=false;
+ function go(){
+  if(++nodes>budget){exhausted=true;return false;}
+  let best=null,opts=null;
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!g[r][c]){
+   const o=candidates(g,r,c);if(!o.length)return false;
+   if(!opts||o.length<opts.length){best=[r,c];opts=o;if(o.length===1)break;}
+  }
+  if(!best)return true;
+  const [r,c]=best;
+  for(const n of opts){g[r][c]=n;if(go())return true;g[r][c]=0;if(exhausted)return false;}
+  return false;
+ }
+ const found=go();return {found,exhausted,nodes};
+}
 function makePuzzle(){
  let solved=Array.from({length:9},()=>Array(9).fill(0));fill(solved);
  let p=solved.map(row=>row.slice()), cells=shuffle(Array.from({length:81},(_,i)=>i));
@@ -77,16 +107,32 @@ function check(){errors=new Set();for(let i=0;i<81;i++){let v=grid[Math.floor(i/
 // Logical candidate eliminator. It only reports a target answer when these
 // valid eliminations reduce that target to one candidate.
 function advancedProof(board,tr,tc,answer){
+ if(!validPartial(board)||!Number.isInteger(tr)||!Number.isInteger(tc)||tr<0||tr>8||tc<0||tc>8||!Number.isInteger(answer)||answer<1||answer>9)return null;
  const peers=(r,c)=>{let a=[];for(let i=0;i<9;i++){if(i!==c)a.push([r,i]);if(i!==r)a.push([i,c]);}let br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let y=br;y<br+3;y++)for(let x=bc;x<bc+3;x++)if(y!==r||x!==c)a.push([y,x]);return [...new Map(a.map(q=>[q.join(','),q])).values()]};
  const cand=Array.from({length:9},(_,r)=>Array.from({length:9},(_,c)=>board[r][c]?[]:candidates(board,r,c)));
+ if(!cand[tr][tc].includes(answer))return null;
  const trace=[]; const key=(r,c)=>r*9+c;
- function remove(n,cells,label,why){let changed=[];for(const [r,c] of cells){if(!board[r][c]&&cand[r][c].includes(n)){cand[r][c]=cand[r][c].filter(x=>x!==n);changed.push([r,c]);}}if(changed.length){trace.push({label,why,n,cells:changed});return true}return false}
+ function consistent(){
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!board[r][c]&&!cand[r][c].length)return false;
+  const units=[];for(let r=0;r<9;r++)units.push(Array.from({length:9},(_,c)=>[r,c]));for(let c=0;c<9;c++)units.push(Array.from({length:9},(_,r)=>[r,c]));for(let br=0;br<9;br+=3)for(let bc=0;bc<9;bc+=3)units.push(Array.from({length:9},(_,k)=>[br+Math.floor(k/3),bc+k%3]));
+  for(const u of units)for(let n=1;n<=9;n++){if(u.some(([r,c])=>board[r][c]===n))continue;if(!u.some(([r,c])=>!board[r][c]&&cand[r][c].includes(n)))return false;}return true;
+ }
+ function remove(n,cells,label,why){let changed=[];for(const [r,c] of cells){if(!board[r][c]&&cand[r][c].includes(n)){cand[r][c]=cand[r][c].filter(x=>x!==n);changed.push([r,c]);}}if(changed.length){if(!consistent()){for(const [r,c] of changed)cand[r][c].push(n);return false;}trace.push({label,why,n,cells:changed});return true}return false}
  function peersOf(r,c){return peers(r,c)}
  for(let pass=0;pass<160;pass++){
-  if(cand[tr][tc].length===1&&cand[tr][tc][0]===answer)return {trace,candidates:cand[tr][tc]};
+  if(consistent()&&cand[tr][tc].length===1&&cand[tr][tc][0]===answer)return {trace,candidates:cand[tr][tc]};
   let changed=false;
   // Locked candidates: a box's candidate for a digit lies in one row/column.
   outer: for(let n=1;n<=9;n++)for(let br=0;br<9;br+=3)for(let bc=0;bc<9;bc+=3){let ps=[];for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(!board[r][c]&&cand[r][c].includes(n))ps.push([r,c]);if(ps.length>1){if(ps.every(p=>p[0]===ps[0][0])){let cells=Array.from({length:9},(_,c)=>[ps[0][0],c]).filter(([r,c])=>(c<bc||c>=bc+3));if(remove(n,cells,'Pointing/claiming candidates',`In the 3×3 box at rows ${br+1}-${br+3}, columns ${bc+1}-${bc+3}, every candidate ${n} lies in row ${ps[0][0]+1}. So ${n} is eliminated from the rest of that row.`)){changed=true;break outer}}if(ps.every(p=>p[1]===ps[0][1])){let cells=Array.from({length:9},(_,r)=>[r,ps[0][1]]).filter(([r,c])=>(r<br||r>=br+3));if(remove(n,cells,'Pointing/claiming candidates',`In the 3×3 box at rows ${br+1}-${br+3}, columns ${bc+1}-${bc+3}, every candidate ${n} lies in column ${ps[0][1]+1}. So ${n} is eliminated from the rest of that column.`)){changed=true;break outer}}}}
+  if(changed)continue;
+  // Locked candidates, claiming direction: a row/column's candidates for a
+  // digit all lie in one box, so remove that digit from the rest of the box.
+  outerClaim: for(let n=1;n<=9;n++){
+   for(let r=0;r<9;r++){let ps=[];for(let c=0;c<9;c++)if(!board[r][c]&&cand[r][c].includes(n))ps.push(c);if(ps.length>1&&ps.every(c=>Math.floor(c/3)===Math.floor(ps[0]/3))){const bc=Math.floor(ps[0]/3)*3,br=Math.floor(r/3)*3;const cells=[];for(let y=br;y<br+3;y++)if(y!==r)for(let x=bc;x<bc+3;x++)cells.push([y,x]);if(remove(n,cells,'Locked candidate (claiming)',`In row ${r+1}, every candidate ${n} lies in the same 3×3 box (columns ${bc+1}-${bc+3}). Therefore ${n} must occupy one of those row cells, and can be removed from the other cells in that box.`)){changed=true;break outerClaim;}}
+   }
+   for(let c=0;c<9;c++){let ps=[];for(let r=0;r<9;r++)if(!board[r][c]&&cand[r][c].includes(n))ps.push(r);if(ps.length>1&&ps.every(r=>Math.floor(r/3)===Math.floor(ps[0]/3))){const br=Math.floor(ps[0]/3)*3,bc=Math.floor(c/3)*3;const cells=[];for(let y=br;y<br+3;y++)for(let x=bc;x<bc+3;x++)if(x!==c)cells.push([y,x]);if(remove(n,cells,'Locked candidate (claiming)',`In column ${c+1}, every candidate ${n} lies in the same 3×3 box (rows ${br+1}-${br+3}). Therefore ${n} must occupy one of those column cells, and can be removed from the other cells in that box.`)){changed=true;break outerClaim;}}
+   }
+  }
   if(changed)continue;
   // X-Wing and Swordfish, in both orientations.
   outer2: for(let n=1;n<=9;n++)for(const orient of ['row','column']){let lines=[];for(let l=0;l<9;l++){let pos=[];for(let x=0;x<9;x++){let r=orient==='row'?l:x,c=orient==='row'?x:l;if(!board[r][c]&&cand[r][c].includes(n))pos.push(x)}if(pos.length>=2&&pos.length<=3)lines.push({l,pos})}
@@ -98,7 +144,7 @@ function advancedProof(board,tr,tc,answer){
   }
   if(changed)continue;
   // XY-Wing / XYZ-Wing. Candidate sets are based on current eliminations.
-  outer3: for(let r=0;r<9;r++)for(let c=0;c<9;c++){let pivot=cand[r][c];if(board[r][c]||pivot.length!==(2)&&pivot.length!==3)continue;let ps=peersOf(r,c).filter(([y,x])=>!board[y][x]&&cand[y][x].length===2&&cand[y][x].some(n=>pivot.includes(n)));for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){let [r1,c1]=ps[i],[r2,c2]=ps[j],a=cand[r1][c1],b=cand[r2][c2];let common=a.filter(n=>b.includes(n)&&pivot.includes(n));if(pivot.length===2){let z1=a.find(n=>!pivot.includes(n)),z2=b.find(n=>!pivot.includes(n));if(common.length!==1||!z1||z1!==z2||a.find(n=>pivot.includes(n))===b.find(n=>pivot.includes(n)))continue;let targets=peersOf(r1,c1).filter(q=>peersOf(r2,c2).some(v=>v[0]===q[0]&&v[1]===q[1]));if(remove(z1,targets,'XY-Wing',`Pivot ${r+1},${c+1} has candidates {${pivot}}. Its two bivalue wings at ${r1+1},${c1+1} and ${r2+1},${c2+1} are {${a}} and {${b}}. Whichever candidate the pivot takes, one wing must be ${z1}; any cell seeing both wings cannot be ${z1}.`)){changed=true;break outer3}}
+  outer3: for(let r=0;r<9;r++)for(let c=0;c<9;c++){let pivot=cand[r][c];if(board[r][c]||pivot.length!==(2)&&pivot.length!==3)continue;let ps=peersOf(r,c).filter(([y,x])=>!board[y][x]&&cand[y][x].length===2&&cand[y][x].some(n=>pivot.includes(n)));for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){let [r1,c1]=ps[i],[r2,c2]=ps[j],a=cand[r1][c1],b=cand[r2][c2];let common=a.filter(n=>b.includes(n));if(pivot.length===2){let z1=a.find(n=>!pivot.includes(n)),z2=b.find(n=>!pivot.includes(n));if(common.length!==1||!z1||z1!==z2||common[0]!==z1||a.find(n=>pivot.includes(n))===b.find(n=>pivot.includes(n)))continue;let targets=peersOf(r1,c1).filter(q=>peersOf(r2,c2).some(v=>v[0]===q[0]&&v[1]===q[1]));if(remove(z1,targets,'XY-Wing',`Pivot ${r+1},${c+1} has candidates {${pivot}}. Its two bivalue wings at ${r1+1},${c1+1} and ${r2+1},${c2+1} are {${a}} and {${b}}. Whichever candidate the pivot takes, one wing must be ${z1}; any cell seeing both wings cannot be ${z1}.`)){changed=true;break outer3}}
     else {let z=pivot.find(n=>a.includes(n)&&b.includes(n));if(!z||!pivot.every(n=>a.includes(n)||b.includes(n)))continue;let targets=peersOf(r1,c1).filter(q=>peersOf(r2,c2).some(v=>v[0]===q[0]&&v[1]===q[1])&&peersOf(r,c).some(v=>v[0]===q[0]&&v[1]===q[1]));if(remove(z,targets,'XYZ-Wing',`The pivot at ${r+1},${c+1} has {${pivot}} and the two wings have {${a}} and {${b}}. All three cells see a common target, and at least one of the pivot or wings must contain ${z}; therefore ${z} is eliminated from any cell that sees all three.`)){changed=true;break outer3}}
    }}
   if(changed)continue;
@@ -124,47 +170,76 @@ function advancedProof(board,tr,tc,answer){
 // A literal is either “candidate X is true” or “candidate X is false”. Weak links
 // encode mutual exclusion; strong links encode that at least one endpoint must hold.
 function aicProof(board,tr,tc,answer){
- const cand=Array.from({length:9},(_,r)=>Array.from({length:9},(_,c)=>board[r][c]?[]:candidates(board,r,c)));
- const id=(r,c,n)=>(r*9+c)*9+(n-1), node=(candidate,truth)=>candidate*2+(truth?1:0);
- const total=81*9*2, adj=Array.from({length:total},()=>[]), edgeMeta=new Map();
- function edge(a,b,why){adj[a].push(b);edgeMeta.set(a+','+b,why)}
- function weak(a,b,why){edge(node(a,true),node(b,false),why);edge(node(b,true),node(a,false),why)}
- function strong(a,b,why){edge(node(a,false),node(b,true),why);edge(node(b,false),node(a,true),why)}
- const units=[];
- for(let r=0;r<9;r++)units.push(Array.from({length:9},(_,c)=>[r,c]));
- for(let c=0;c<9;c++)units.push(Array.from({length:9},(_,r)=>[r,c]));
- for(let br=0;br<9;br+=3)for(let bc=0;bc<9;bc+=3)units.push(Array.from({length:9},(_,k)=>[br+Math.floor(k/3),bc+k%3]));
- // Candidate alternatives in a cell: weak links for every pair, strong link when bivalue.
- for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!board[r][c]){
-  const ns=cand[r][c].map(n=>id(r,c,n));
-  for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++)weak(ns[i],ns[j],`In row ${r+1}, column ${c+1}, the cell can hold only one digit.`);
-  if(ns.length===2)strong(ns[0],ns[1],`Bivalue cell row ${r+1}, column ${c+1} must contain one of its two candidates.`);
- }
- // Same digit in a unit: all candidates are mutually exclusive; exactly two form a strong link.
- for(let n=1;n<=9;n++)for(const unit of units){
-  const ps=unit.filter(([r,c])=>!board[r][c]&&cand[r][c].includes(n)).map(([r,c])=>id(r,c,n));
-  for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++)weak(ps[i],ps[j],`Digit ${n} cannot occur twice in the same row, column or box.`);
-  if(ps.length===2)strong(ps[0],ps[1],`This unit has exactly two possible locations for digit ${n}, so one must be true.`);
- }
- function search(start){
-  const parent=new Int32Array(total);parent.fill(-1);const q=[start];parent[start]=start;
-  for(let qi=0;qi<q.length;qi++)for(const v of adj[q[qi]])if(parent[v]===-1){parent[v]=q[qi];q.push(v)}
-  function path(end){if(parent[end]===-1)return [];let a=[];for(let x=end;;x=parent[x]){a.push(x);if(x===start)break}return a.reverse()}
-  return {parent,path};
- }
- function literalText(v){const truth=!!(v%2),k=Math.floor(v/2),n=k%9+1,cell=Math.floor(k/9);return `r${Math.floor(cell/9)+1}c${cell%9+1}(${n}) ${truth?'true':'false'}`}
- const rejected=[],traces=[];
- for(const n of cand[tr][tc]){
-  const cid=id(tr,tc,n),res=search(node(cid,true)),contradiction=node(cid,false);
-  if(res.parent[contradiction]!==-1){rejected.push(n);const path=res.path(contradiction);traces.push({candidate:n,path,links:path.slice(1).map((v,i)=>edgeMeta.get(path[i]+','+v)||'inference')});}
- }
- if(rejected.length===cand[tr][tc].length-1&&cand[tr][tc].includes(answer)){
-  return {rejected,traces,remaining:answer,describe(){return traces.map(t=>{
-   const chain=t.path.map(literalText).join(' → ');
-   return `Assuming ${t.candidate} at row ${tr+1}, column ${tc+1} is true, the implication chain ${chain} reaches the same candidate being false. That is a contradiction, so ${t.candidate} is eliminated. `+t.links.slice(0,5).join(' ');
-  }).join(' ')}}
- }
- return null;
+  if(!validPartial(board)||!Number.isInteger(tr)||!Number.isInteger(tc)||tr<0||tr>8||tc<0||tc>8||!Number.isInteger(answer)||answer<1||answer>9)return null;
+  // Rebuild the implication graph after every verified elimination. This is
+  // essential: a newly bivalue cell or two-position unit can create new links.
+  const cand=Array.from({length:9},(_,r)=>Array.from({length:9},(_,c)=>board[r][c]?[]:candidates(board,r,c)));
+  if(!cand[tr][tc].includes(answer))return null;
+  const id=(r,c,n)=>(r*9+c)*9+(n-1), node=(candidate,truth)=>candidate*2+(truth?1:0);
+  const units=[];
+  for(let r=0;r<9;r++)units.push({name:`row ${r+1}`,cells:Array.from({length:9},(_,c)=>[r,c])});
+  for(let c=0;c<9;c++)units.push({name:`column ${c+1}`,cells:Array.from({length:9},(_,r)=>[r,c])});
+  for(let br=0;br<9;br+=3)for(let bc=0;bc<9;bc+=3)units.push({name:`box ${Math.floor(br/3)+1},${Math.floor(bc/3)+1}`,cells:Array.from({length:9},(_,k)=>[br+Math.floor(k/3),bc+k%3])});
+  const peer=(r,c,y,x)=>r===y||c===x||(Math.floor(r/3)===Math.floor(y/3)&&Math.floor(c/3)===Math.floor(x/3));
+  function consistent(){
+    for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!board[r][c]&&!cand[r][c].length)return false;
+    for(const u of units)for(let n=1;n<=9;n++){
+      if(u.cells.some(([r,c])=>board[r][c]===n))continue;
+      if(!u.cells.some(([r,c])=>!board[r][c]&&cand[r][c].includes(n)))return false;
+    }
+    return true;
+  }
+  function buildGraph(){
+    const total=81*9*2,adj=Array.from({length:total},()=>[]),meta=new Map();
+    const edge=(a,b,why)=>{adj[a].push(b);meta.set(a+','+b,why)};
+    const weak=(a,b,why)=>{edge(node(a,true),node(b,false),why);edge(node(b,true),node(a,false),why)};
+    const strong=(a,b,why)=>{edge(node(a,false),node(b,true),why);edge(node(b,false),node(a,true),why)};
+    for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!board[r][c]){
+      const ns=cand[r][c].map(n=>id(r,c,n));
+      for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++)weak(ns[i],ns[j],`Weak link: row ${r+1}, column ${c+1} cannot contain both candidates.`);
+      if(ns.length===2)strong(ns[0],ns[1],`Strong link: row ${r+1}, column ${c+1} has exactly two candidates.`);
+    }
+    for(let n=1;n<=9;n++)for(const u of units){
+      const ps=u.cells.filter(([r,c])=>!board[r][c]&&cand[r][c].includes(n)).map(([r,c])=>id(r,c,n));
+      for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++)weak(ps[i],ps[j],`Weak link: digit ${n} cannot occur twice in the same ${u.name}.`);
+      if(ps.length===2)strong(ps[0],ps[1],`Strong link: ${u.name} has exactly two possible locations for digit ${n}.`);
+    }
+    return {adj,meta};
+  }
+  function findPath(adj,start,end){
+    const parent=new Int32Array(adj.length);parent.fill(-1);const q=[start];parent[start]=start;
+    for(let i=0;i<q.length&&parent[end]===-1;i++)for(const v of adj[q[i]])if(parent[v]===-1){parent[v]=q[i];q.push(v);}
+    if(parent[end]===-1)return null;
+    const path=[];for(let x=end;;x=parent[x]){path.push(x);if(x===start)break;}return path.reverse();
+  }
+  const literalText=v=>{const truth=!!(v%2),k=Math.floor(v/2),n=k%9+1,cell=Math.floor(k/9);return `r${Math.floor(cell/9)+1}c${cell%9+1}(${n}) ${truth?'true':'false'}`};
+  const traces=[];
+  // A bounded loop prevents pathological invalid states from monopolizing the UI.
+  for(let round=0;round<729;round++){
+    if(!consistent())return null;
+    const {adj,meta}=buildGraph();let applied=false;
+    // Test one candidate at a time, then rebuild all links from the changed state.
+    for(let r=0;r<9&&!applied;r++)for(let c=0;c<9&&!applied;c++)if(!board[r][c]){
+      for(const n of [...cand[r][c]]){
+        const cid=id(r,c,n),path=findPath(adj,node(cid,true),node(cid,false));
+        if(!path)continue;
+        const before=cand[r][c].slice();cand[r][c]=cand[r][c].filter(v=>v!==n);
+        if(!consistent()){cand[r][c]=before;continue;}
+        traces.push({r,c,n,path,links:path.slice(1).map((v,i)=>meta.get(path[i]+','+v)||'Verified implication')});
+        applied=true;break;
+      }
+    }
+    if(!applied)break;
+    if(cand[tr][tc].length===1&&cand[tr][tc][0]===answer){
+      const relevant=traces.filter(t=>t.r===tr&&t.c===tc);
+      if(relevant.length)return {rejected:relevant.map(t=>t.n),traces:relevant,remaining:answer,describe(){return relevant.map(t=>`Assuming candidate ${t.n} at row ${tr+1}, column ${tc+1} is true, the verified implication chain ${t.path.map(literalText).join(' → ')} reaches the same candidate being false. Therefore ${t.n} is eliminated. Links: ${t.links.join(' | ')}`).join(' ');}};
+    }
+  }
+  if(cand[tr][tc].length===1&&cand[tr][tc][0]===answer){
+    const relevant=traces.filter(t=>t.r===tr&&t.c===tc);
+    if(relevant.length)return {rejected:relevant.map(t=>t.n),traces:relevant,remaining:answer,describe(){return relevant.map(t=>`Assuming candidate ${t.n} at row ${tr+1}, column ${tc+1} is true, the verified implication chain ${t.path.map(literalText).join(' → ')} reaches the same candidate being false. Therefore ${t.n} is eliminated. Links: ${t.links.join(' | ')}`).join(' ');}};
+  }
+  return null;
 }
 
 function explain(){
@@ -230,22 +305,6 @@ function explain(){
  }
  // A complete, verified fallback: test every alternative by exhaustive constraint search.
  if(!proven){
-  function findCompletion(g, budget=200000){
-   let nodes=0, exhausted=false;
-   function go(){
-    if(++nodes>budget){exhausted=true;return false}
-    let best=null,opts=null;
-    for(let rr=0;rr<9;rr++)for(let cc=0;cc<9;cc++)if(!g[rr][cc]){
-     const o=candidates(g,rr,cc);if(!o.length)return false;
-     if(!opts||o.length<opts.length){best=[rr,cc];opts=o;if(o.length===1)break}
-    }
-    if(!best)return true;
-    const [rr,cc]=best;
-    for(const n of opts){g[rr][cc]=n;if(go())return true;g[rr][cc]=0;if(exhausted)return false}
-    return false;
-   }
-   const found=go();return {found,exhausted,nodes};
-  }
   const rejected=[];
   for(const n of targetCandidates){
    if(n===answer)continue;
