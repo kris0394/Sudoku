@@ -1,0 +1,522 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#14243b"><meta name="apple-mobile-web-app-capable" content="yes"><title>Sudoku Tutor</title><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#17253a;background:#edf2f7}*{box-sizing:border-box}body{margin:0}.wrap{max-width:650px;margin:auto;padding:16px 12px 40px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}h1{font-size:24px;margin:0}small,.muted{color:#60718a}.panel{background:white;border-radius:17px;padding:15px;box-shadow:0 3px 18px #17253a12;margin-bottom:13px}.top{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}button,select{font:inherit;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#17253a;padding:10px 12px;cursor:pointer}button:disabled{opacity:.4}button.primary{background:#174a86;color:white;border-color:#174a86}.board{display:grid;grid-template-columns:repeat(9,1fr);border:3px solid #17253a;margin:12px 0;aspect-ratio:1;width:100%;touch-action:manipulation}.cell{min-width:0;min-height:0;padding:0;border-radius:0;border:0;border-right:1px solid #b6c2d0;border-bottom:1px solid #b6c2d0;display:flex;align-items:center;justify-content:center;font-size:clamp(17px,5vw,30px);font-weight:500;position:relative;background:white;color:#15559a}.cell:nth-child(3n){border-right:2px solid #17253a}.cell:nth-child(n+19):nth-child(-n+27),.cell:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid #17253a}.cell.correct-entry{background:#d6f5df!important;color:#126436!important}.cell.correct-entry.selected{background:#a9e8bd!important;outline:2px solid #18834b!important}.cell.given{font-weight:750;color:#17253a}.cell.peer{background:#edf4fc}.cell.same{background:#dcebf8}.cell.selected{background:#9fc6f5!important;outline:2px solid #1456a0;outline-offset:-2px}.cell.highlight{background:#ffe3a1!important}.cell.conflict{background:#ffd0d0!important}.cell.assumption{background:#d9c9ff!important;outline:3px solid #7754b7!important;outline-offset:-3px}.cell.rejected{background:#ff9b9b!important;color:#831515!important;outline:3px solid #c62828!important;outline-offset:-3px}.cell.proof-target{box-shadow:inset 0 0 0 3px #c62828}.cell.proof-focus{box-shadow:inset 0 0 0 4px #e5a000;background:#fff2cc!important}.cell.proof-focus:empty::before{content:'?';font-size:16px;color:#a36a00}.cell .ghost{font-size:0.8em;color:#8050a0;font-style:italic}.cell.rejected::after{content:"×";position:absolute;right:2px;top:0;font-size:14px;color:#991b1b;font-weight:900}.cell .notes{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);position:absolute;inset:1px;font-size:clamp(7px,1.7vw,12px);font-weight:500;color:#52708f}.cell .notes span{text-align:center;align-self:center}.numbers{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}.numbers button{padding:10px 0;font-size:22px;font-weight:650}.numbers button.active{background:#174a86;color:white}.numbers button.complete{opacity:.45;text-decoration:line-through}.actions{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}.actions button{flex:1;white-space:nowrap;font-size:14px}.hint{border-left:4px solid #3479bb;background:#f2f7ff;padding:13px;border-radius:9px;line-height:1.55;white-space:pre-line;min-height:75px}.hint strong{color:#153e72}.steps{display:flex;gap:8px;margin-top:10px}.steps button{flex:1}.toggle{display:flex;align-items:center;gap:8px;font-size:14px}.toggle input{width:18px;height:18px}.status{font-size:14px;color:#566b84}.footer{font-size:12px;color:#65758a;line-height:1.5}#explainPanel{scroll-margin-top:8px;padding:11px 13px}#explainPanel h2{font-size:16px!important}.hint{padding:10px;font-size:14px;min-height:0}.steps{margin-top:7px}.steps button{padding:7px}.actions{margin:7px 0}.actions button{padding:8px 5px}.numbers button{padding:6px 0;font-size:19px}.toggle{font-size:12px}.panel{padding:11px;margin-bottom:9px}.board{margin:8px 0}.wrap{padding:8px 8px 25px}@media(min-width:700px){.wrap{padding-top:30px}.cell{font-size:30px}}@media(max-width:390px){.actions button{font-size:12px;padding:9px 6px}}
+
+.gamebar{display:flex;justify-content:space-between;font-size:12px;font-weight:650;color:#5a6d83;margin:10px 1px 0}.settings{background:#f4f7fc;border:1px solid #dce5ef;border-radius:12px;padding:12px;margin:10px 0}.settings h3{margin:0 0 9px;font-size:15px}.settings .toggle{margin:8px 0}.proofbar{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:#65758a;margin-top:8px}.proofbar button{padding:4px 8px;font-size:12px}.cell .notes span.eliminated{color:#b71c1c;text-decoration:line-through;font-weight:800;background:#ffe0e0;border-radius:3px}.cell .notes span.focusCandidate{background:#ffe18b;border-radius:3px;font-weight:900}.cell .notes{pointer-events:none}.cell.proof-focus{box-shadow:inset 0 0 0 3px #d28c00}.cell.rejected{z-index:1}.actions button{min-width:0}.board{margin-bottom:8px}.hint{overflow-wrap:anywhere}.cell{font-variant-numeric:tabular-nums}.cell:focus-visible{outline:3px solid #1b65ad;z-index:2}.toggle{line-height:1.3}body.dark{background:#101b2b;color:#edf2fa}body.dark .panel{background:#1b2b40}body.dark .cell{background:#24354b;color:#d2e9ff}body.dark .cell.given{color:white}body.dark .cell.peer{background:#2a3f5a}body.dark .cell.selected{background:#426da1!important}body.dark button,body.dark select{background:#24354b;color:#edf2fa;border-color:#50657d}body.dark button.primary,body.dark .numbers button.active{background:#2364b1}body.dark .settings{background:#263c56}body.dark .hint{background:#233b5b;color:#f0f5fc}body.dark .footer,body.dark small,body.dark .status{color:#b3c5d9}body.dark .cell.correct-entry{background:#1b6248!important;color:#d5ffe3!important}body.dark .cell.rejected{background:#8b3030!important;color:white!important}body.dark .cell.highlight{background:#735a23!important;color:#fff!important}body.dark .cell.assumption{background:#5b417e!important;color:#fff!important}
+@media(max-width:480px){.wrap{padding:6px 5px 20px}.panel{padding:8px;border-radius:13px}.cell{font-size:clamp(18px,6vw,27px)}.numbers button{font-size:21px}.actions{gap:4px}.actions button{font-size:12px;padding:9px 3px}.board{border-width:2px}.top button{padding:8px}.hint{font-size:13px}}
+#importPanel textarea{background:#fff;color:#17253a}body.dark #importPanel textarea{background:#24354b;color:#fff}#gameType{font-weight:700;color:#2467a0}.top button{font-size:13px}@media(max-width:480px){.top{gap:5px}.top button{padding:7px 6px;font-size:11px}}
+.statsgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.statbox{padding:10px;background:#e7effa;border-radius:9px}.statbox b{display:block;font-size:21px}.statbox small{font-size:11px}body.dark .statbox{background:#304967}</style></head><body><main class="wrap"><header><div><h1>Sudoku Tutor</h1><small>Take your time. Understand every move.</small></div><span class="status" id="progress">Ready</span></header><section class="panel"><div class="top"><label>Difficulty <select id="difficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></label><button id="newGame">New puzzle</button><button id="reset">Restart</button><button id="daily">Daily challenge</button><button id="importBtn">Import puzzle</button><button id="analyzeDifficulty">Analyze difficulty</button><button id="settingsBtn" aria-label="Game settings">⚙ Settings</button><button id="statsBtn">📊 Stats</button></div><div id="importPanel" class="settings" hidden><h3>Import your own Sudoku</h3><p class="footer">Paste 81 digits, using 0 or . for empty cells. The puzzle must have exactly one solution. Import replaces your current board.</p><textarea id="importText" rows="4" maxlength="200" placeholder="81 digits, 0 for blanks" style="width:100%;font:16px ui-monospace,monospace;padding:9px;border-radius:9px;border:1px solid #aabbd0"></textarea><div class="actions"><button id="importApply" class="primary">Validate and play</button><button id="importCancel">Cancel</button></div><div id="importStatus" role="status" class="footer"></div></div><div id="statsPanel" class="settings" hidden><h3>Play statistics</h3><div id="statsContent" class="statsgrid"></div><p class="footer">Stored only in this browser. Historical games before v16 are not counted. No timer or analytics tracking.</p><button id="closeStats">Close</button></div><div class="gamebar"><span id="mistakes">Mistakes: 0</span><span id="remaining">81 cells</span><span id="levelLabel">Medium</span><span id="gameType"></span></div><div class="board" id="board" role="grid" aria-label="Sudoku puzzle"></div><div id="tutorSlot"></div><div class="numbers" id="numbers"></div><div class="actions"><button id="notes">✎ Notes: off</button><button id="erase">Erase</button><button id="undo">↶ Undo</button><button id="redo">↷ Redo</button></div><div class="actions"><button id="autoNotes">Fill notes</button><button id="clearNotes">Clear notes</button><button id="showCandidates">Candidates: off</button></div><div class="actions"><button id="hint">💡 Hint</button><button id="advanced">🧠 Advanced walkthrough</button><button id="explain" class="primary">Explain selected number</button></div><div class="top"><label class="toggle"><input type="checkbox" id="automatic"> Auto-explain incorrect entries</label><label class="toggle"><input type="checkbox" id="check" checked> Highlight conflicts</label></div><div id="settingsPanel" class="settings" hidden><h3>Game settings</h3><label class="toggle"><input type="checkbox" id="showErrors" checked> Mark solution-matching entries green</label><label class="toggle"><input type="checkbox" id="sameDigits" checked> Highlight matching numbers</label><label class="toggle"><input type="checkbox" id="darkMode"> Dark theme</label><label class="toggle"><input type="checkbox" id="autoRemoveNotes" checked> Remove pencil notes after a placement</label><p class="footer">Green indicates a match with the stored solution, not a logical proof. Switch it off to play without answer checking.</p></div></section><section class="panel" id="explainPanel"><h2 style="font-size:19px;margin:0 0 8px">Your reasoning tutor</h2><p class="footer" style="margin:0 0 8px">Green = solution match · Purple = hypothetical placement · Yellow = relevant cells · Red = rejected candidate. Crossed-out mini-digits are logical eliminations.</p><div class="hint" id="explanation" aria-live="polite">Select an empty cell, choose a number, and tap “Explain selected number”. You can also request a hint.</div><div class="proofbar"><span id="proofCount">No proof active</span><button id="closeProof">Close proof</button></div><div class="steps"><button id="previous" disabled>← Previous</button><button id="next" disabled>Next step →</button></div><p class="footer">Explanations use Sudoku constraints: singles, locked candidates, naked and hidden pairs, X-Wing, and contradiction chains. A solution comparison is clearly identified when no short proof is available.</p></section><p class="footer">Offline-ready once hosted over HTTPS and opened at least once. Games are saved on this device. No accounts, ads, timers or hint limits.</p></main><script>
+(()=>{'use strict';document.getElementById('tutorSlot').appendChild(document.getElementById('explainPanel'));const $=id=>document.getElementById(id);const range=[...Array(81).keys()];const row=i=>Math.floor(i/9),col=i=>i%9,box=i=>Math.floor(row(i)/3)*3+Math.floor(col(i)/3),label=i=>`R${row(i)+1}C${col(i)+1}`;const peers=range.map(i=>range.filter(j=>j!==i&&(row(j)===row(i)||col(j)===col(i)||box(j)===box(i))));const units=[...Array(9)].map((_,k)=>range.filter(i=>row(i)===k)).concat([...Array(9)].map((_,k)=>range.filter(i=>col(i)===k)),[...Array(9)].map((_,k)=>range.filter(i=>box(i)===k)));const shuffled=a=>{let b=a.slice();for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b};function candidates(a,i){if(a[i])return [];let seen=new Set(peers[i].map(j=>a[j]));return [1,2,3,4,5,6,7,8,9].filter(v=>!seen.has(v))}function valid(a){return range.every(i=>!a[i]||peers[i].every(j=>a[j]!==a[i]))}function solve(a,limit=1,random=false){let found=[],work=a.slice(),nodes=0;function rec(){if(found.length>=limit||++nodes>100000)return;let best=-1,opts=null;for(let i=0;i<81;i++)if(!work[i]){let c=candidates(work,i);if(!c.length)return;if(!opts||c.length<opts.length){best=i;opts=c;if(c.length===1)break}}if(best===-1){found.push(work.slice());return}for(const n of random?shuffled(opts):opts){work[best]=n;rec();work[best]=0;if(found.length>=limit)return}}if(valid(work))rec();return found}const PUZZLES={"easy":[{"p":"502000817097140200613800904009570620076000085000280070008050000951002340724300561","solution":"542639817897145236613827954189574623276913485435286179368451792951762348724398561"},{"p":"527806003000204857003070200048060901601080570305490002902703168010000020006100745","solution":"527816493169234857483975216248567931691382574375491682952743168714658329836129745"},{"p":"050618400040200690002093807401000568270800139500009274005070310000580902910020085","solution":"759618423348257691162493857491732568276845139583169274825974316637581942914326785"}],"medium":[{"p":"093657200008003000240000000000091043900005018000876592470130006020004000839000050","solution":"193657284758423169246918375587291643962345718314876592475139826621584937839762451"},{"p":"000100200018207936000800000900004861100600095600900700400000009096500413003009678","solution":"364195287518247936729863154932754861147628395685931742471386529896572413253419678"},{"p":"200079108010000094080341000832000070100068000960700000007000900408230061050800742","solution":"243679158716582394589341627832915476175468239964723815627154983498237561351896742"}],"hard":[{"p":"000000501687005000100090700300700600714008900009000000800900000070060005030401007","solution":"493872561687145329125396748358729614714638952269514873842957136971263485536481297"},{"p":"800007030001000080060000427006005000000300002423006000004000093000004001932010006","solution":"849267135271453689365189427196825374758341962423796518514672893687934251932518746"},{"p":"900000104000900050000004080090100207003005040600200000030701408800000613400090000","solution":"957836124184927356362514789598143267723685941641279835235761498879452613416398572"}]};
+function makePuzzle(level){const pool=PUZZLES[level]||PUZZLES.medium;const seed=(Math.random()*2147483647)|0;return transformedPuzzle(level,seed);}
+// Every variation is a Sudoku-preserving transformation of a verified source puzzle.
+// Digit renaming, row/column swaps inside bands/stacks, band/stack swaps and transpose
+// preserve both unique solution and the structural solving difficulty.
+function transformedPuzzle(level,seed){
+ let x=(seed>>>0)||1;const rand=m=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)%m};
+ const pool=PUZZLES[level]||PUZZLES.medium,item=pool[rand(pool.length)];
+ const perm3=()=>{let a=[0,1,2];for(let i=2;i>0;i--){let j=rand(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+ const bands=perm3(),stacks=perm3(),rowOrder=[],colOrder=[];
+ for(const b of bands){for(const t of perm3())rowOrder.push(3*b+t)}
+ for(const b of stacks){for(const t of perm3())colOrder.push(3*b+t)}
+ const digits=[1,2,3,4,5,6,7,8,9];for(let i=8;i>0;i--){let j=rand(i+1);[digits[i],digits[j]]=[digits[j],digits[i]]}
+ const trans=rand(2)===1;
+ const transform=str=>Array.from({length:81},(_,i)=>{const r=Math.floor(i/9),c=i%9,old=trans?colOrder[c]*9+rowOrder[r]:rowOrder[r]*9+colOrder[c],v=Number(str[old]);return v?digits[v-1]:0});
+ return {p:transform(item.p),solution:transform(item.solution),seed};
+}
+function dateSeed(day,level){let x=2166136261;for(const c of day+level){x=Math.imul(x^c.charCodeAt(0),16777619)}return x>>>0}
+function clearProof(){explanations=[];step=0;highlights=[];rejected=[];assumptions=[];proofValues=null;proofFocus=-1;proofRemoved=[]}
+const statsKey='sudokuTutorStatsV16';
+let stats={started:0,completed:0,correct:0,mistakes:0,hints:0,explanations:0,advanced:0,byLevel:{easy:0,medium:0,hard:0,custom:0},completedKeys:[]};
+try{const old=JSON.parse(localStorage.getItem(statsKey));if(old&&typeof old==='object')stats={...stats,...old,byLevel:{...stats.byLevel,...old.byLevel},completedKeys:Array.isArray(old.completedKeys)?old.completedKeys:[]}}catch(e){}
+function statSave(){try{localStorage.setItem(statsKey,JSON.stringify(stats))}catch(e){}}
+function statAdd(k){stats[k]=(stats[k]||0)+1;statSave()}
+function statsShow(){const pairs=[['Games started',stats.started],['Puzzles solved',stats.completed],['Correct entries',stats.correct],['Mistakes',stats.mistakes],['Hints used',stats.hints],['Explanations requested',stats.explanations],['Advanced walkthroughs',stats.advanced],['Easy solved',stats.byLevel.easy||0],['Medium solved',stats.byLevel.medium||0],['Hard solved',stats.byLevel.hard||0],['Imported solved',stats.byLevel.custom||0]];$('statsContent').innerHTML='';for(const [label,n] of pairs){const b=document.createElement('div');b.className='statbox';const v=document.createElement('b');v.textContent=n;const t=document.createElement('small');t.textContent=label;b.append(v,t);$('statsContent').append(b)}}
+function checkCompletion(){if(!state||!state.values.every(Boolean)||!valid(state.values)||state.values.some((v,i)=>v!==state.solution[i])||state.completed)return;state.completed=true;stats.completed++;stats.byLevel[state.level]=(stats.byLevel[state.level]||0)+1;statSave();message('🎉 Puzzle solved! Your completion has been recorded.');}
+function startPuzzle(g,level,kind='random',day=''){statAdd('started');mistakes=0;state={puzzle:g.p,solution:g.solution,values:g.p.slice(),notes:Array.from({length:81},()=>[]),level,kind,day};selected=range.find(i=>!g.p[i])??0;undo=[];redo=[];clearProof();message(kind==='daily'?`Daily challenge for ${day} (${level}). Your progress is saved on this device.`:kind==='import'?`Imported puzzle validated: one unique solution. Ready to play.`:`New ${level} puzzle ready. Select a cell and choose a number.`);render()}
+let showCandidates=false, proofRemoved=[],mistakes=0;let state=null,selected=0,chosen=2,noteMode=false,undo=[],redo=[],explanations=[],step=0,highlights=[],rejected=[],assumptions=[],proofValues=null,proofFocus=-1;const save=()=>{try{localStorage.setItem('sudokuTutorV12',JSON.stringify({state,selected,chosen,noteMode,automatic:$('automatic').checked,check:$('check').checked,showCandidates,mistakes,showErrors:$('showErrors').checked,sameDigits:$('sameDigits').checked,darkMode:$('darkMode').checked,autoRemoveNotes:$('autoRemoveNotes').checked}));if(state?.kind==='daily'&&state.day)localStorage.setItem('sudokuDaily-'+state.day+'-'+state.level,JSON.stringify({state,mistakes}));}catch(e){}};function snapshot(){return JSON.stringify({values:state.values,notes:state.notes})}function push(){undo.push(snapshot());if(undo.length>200)undo.shift();redo=[]}function message(t,hl=[]){explanations=[{text:t,hl}];step=0;renderExplanation()}function setSteps(s){explanations=s;step=0;renderExplanation()}function renderExplanation(){let e=explanations[step];$('explanation').textContent=e?.text||'Select a cell and number.';highlights=e?.hl||[];rejected=e?.bad||[];assumptions=e?.assume||[];proofValues=e?.board||null;proofFocus=e?.focus??-1;proofRemoved=e?.removedAll||[];$('proofCount').textContent=explanations.length>1?`Step ${step+1} of ${explanations.length}`:explanations.length?'Explanation':'No proof active';$('previous').disabled=step===0;$('next').disabled=step>=explanations.length-1;renderBoard()}function renderBoard(){const b=$('board');b.innerHTML='';for(let i=0;i<81;i++){let v=state.values[i],el=document.createElement('button');el.className='cell'+(state.puzzle[i]?' given':'')+(i===selected?' selected':'')+(v&&!state.puzzle[i]&&v===state.solution[i]&&$('showErrors').checked?' correct-entry':'')+(i!==selected&&peers[selected].includes(i)?' peer':'')+(v&&v===state.values[selected]&&$('sameDigits').checked?' same':'')+(highlights.includes(i)?' highlight':'')+(rejected.includes(i)?' rejected':'')+(assumptions.includes(i)?' assumption':'')+(proofFocus===i?' proof-focus':'')+($('check').checked&&!proofValues&&v&&peers[i].some(j=>state.values[j]===v)?' conflict':'');el.setAttribute('role','gridcell');el.setAttribute('aria-label',`${label(i)} ${v||'empty'}`);if(v)el.textContent=v;else if(proofValues&&proofValues[i]){let ghost=document.createElement('span');ghost.className='ghost';ghost.textContent=proofValues[i];el.appendChild(ghost)}else if(showCandidates||state.notes[i]?.length||proofRemoved.some(x=>x.i===i)){let notes=document.createElement('div');notes.className='notes';const cs=showCandidates?candidates(state.values,i):state.notes[i]||[];for(let n=1;n<=9;n++){let ss=document.createElement('span');const gone=proofRemoved.some(x=>x.i===i&&x.n===n);ss.textContent=cs.includes(n)||gone?n:'';if(gone)ss.className='eliminated';notes.appendChild(ss)}el.appendChild(notes)}el.onclick=()=>{selected=i;explanations=[];step=0;highlights=[];rejected=[];assumptions=[];proofValues=null;proofFocus=-1;$('explanation').textContent='Select a number and tap Explain to start a new proof.';$('previous').disabled=true;$('next').disabled=true;renderBoard();save()};b.appendChild(el)}document.querySelectorAll('.numbers button').forEach(b=>b.classList.toggle('active',Number(b.dataset.n)===chosen));$('notes').textContent=`✎ Notes: ${noteMode?'on':'off'}`;for(const b of document.querySelectorAll('.numbers button')){const n=Number(b.dataset.n);b.classList.toggle('complete',state.values.filter(x=>x===n).length===9)}$('undo').disabled=!undo.length;$('redo').disabled=!redo.length;$('progress').textContent=`${state.values.filter(Boolean).length}/81 filled`;$('remaining').textContent=`${81-state.values.filter(Boolean).length} cells left`;$('mistakes').textContent=`Mistakes: ${mistakes}`;$('levelLabel').textContent=(state.level||'medium').toUpperCase();$('gameType').textContent=state.kind==='daily'?'Daily '+state.day:state.kind==='import'?'Imported':'Library';if(state.values.every(Boolean)&&valid(state.values))$('progress').textContent='🎉 Solved!'}function render(){checkCompletion();renderBoard();save()}// Deterministic human-style candidate engine. Every elimination is derived from visible constraints.
+function logicEngine(initial, maxSteps=160){
+ const board=initial.slice(), removed=Array.from({length:81},()=>new Set()), trace=[];
+ const unitLabel=u=>row(u[0])===row(u[8])?`row ${row(u[0])+1}`:col(u[0])===col(u[8])?`column ${col(u[0])+1}`:`box ${box(u[0])+1}`;
+ const opts=i=>board[i]?[]:candidates(board,i).filter(n=>!removed[i].has(n));
+ function contradiction(){
+  for(const i of range)if(!board[i]&&!opts(i).length)return {type:'cell',i};
+  for(const u of units)for(let n=1;n<=9;n++)if(!u.some(i=>board[i]===n)&&!u.some(i=>!board[i]&&opts(i).includes(n)))return {type:'unit',unit:u,n};
+  return null;
+ }
+ function record(kind,text,cells,changes=[],placement=null){
+  if(placement){board[placement.i]=placement.n;removed[placement.i].clear()}
+  else for(const [i,n] of changes)removed[i].add(n);
+  trace.push({kind,text,hl:[...new Set(cells)],board:board.slice(),removed:changes.map(([i,n])=>({i,n})),removedAll:removed.flatMap((set,i)=>[...set].map(n=>({i,n})))});
+ }
+ function eliminate(kind,reason,base,targets,numbers){
+  const changes=[];
+  for(const i of targets)for(const n of numbers)if(!board[i]&&opts(i).includes(n))changes.push([i,n]);
+  if(!changes.length)return false;
+  record(kind,`${kind}: ${reason}\n\nEliminate ${changes.map(([i,n])=>`${n} from ${label(i)}`).join(', ')}.`,[...base,...changes.map(x=>x[0])],changes);
+  return true;
+ }
+ for(let k=0;k<maxSteps;k++){
+  const bad=contradiction();if(bad)return {trace,board,removed,bad};
+  let acted=false;
+  // Singles are always applied before candidate eliminations.
+  for(const i of range)if(!board[i]){const c=opts(i);if(c.length===1){record('Naked single',`${label(i)} must be ${c[0]}: it is the only remaining candidate.`,[i,...peers[i].filter(j=>board[j])],[],{i,n:c[0]});acted=true;break}}
+  if(acted)continue;
+  for(const u of units){for(let n=1;n<=9;n++){
+   if(u.some(i=>board[i]===n))continue;
+   const spots=u.filter(i=>!board[i]&&opts(i).includes(n));
+   if(spots.length===1){record('Hidden single',`${label(spots[0])} must be ${n}: it is the only cell that can hold ${n} in ${unitLabel(u)}.`,u,[],{i:spots[0],n});acted=true;break}
+  }if(acted)break}if(acted)continue;
+  // Locked candidates: box -> row/column and row/column -> box.
+  for(const u of units){if(acted)break;for(let n=1;n<=9;n++){
+   if(u.some(i=>board[i]===n))continue;
+   const spots=u.filter(i=>!board[i]&&opts(i).includes(n));if(spots.length<2)continue;
+   const families=[row,col,box];
+   for(const f of families){if(acted)break;
+    if(spots.every(i=>f(i)===f(spots[0]))){
+     const other=units.find(v=>v.length===9&&v.includes(spots[0])&&v.every(i=>f(i)===f(spots[0])));
+     if(!other||other===u||other.every(i=>u.includes(i)))continue;
+     const targets=other.filter(i=>!u.includes(i));
+     if(eliminate('Locked candidates',`In ${unitLabel(u)}, ${n} can only occupy ${spots.map(label).join(' or ')}. All these cells also belong to ${unitLabel(other)}, so ${n} cannot occur elsewhere in that ${unitLabel(other)}.`,spots,targets,[n]))acted=true;
+    }
+   }
+   if(acted)break;
+  }}if(acted)continue;
+  // Naked pairs: two cells with the same two candidates in one unit.
+  for(const u of units){if(acted)break;
+   const pairs=new Map();for(const i of u)if(!board[i]){const c=opts(i);if(c.length===2){const key=c.join(',');if(!pairs.has(key))pairs.set(key,[]);pairs.get(key).push(i)}}
+   for(const [key,cells] of pairs)if(cells.length===2){const ns=key.split(',').map(Number);
+    if(eliminate('Naked pair',`${cells.map(label).join(' and ')} contain only ${ns.join(' and ')} in ${unitLabel(u)}. Those two digits must occupy those two cells in some order.`,cells,u.filter(i=>!cells.includes(i)),ns)){acted=true;break}
+   }
+  }if(acted)continue;
+  // Hidden pairs: two numbers share exactly the same two positions in a unit.
+  for(const u of units){if(acted)break;for(let a=1;a<=8&&!acted;a++)for(let b=a+1;b<=9&&!acted;b++){
+   if(u.some(i=>board[i]===a||board[i]===b))continue;
+   const aa=u.filter(i=>!board[i]&&opts(i).includes(a)),bb=u.filter(i=>!board[i]&&opts(i).includes(b));
+   if(aa.length===2&&bb.length===2&&aa.every(i=>bb.includes(i))){
+    const changes=aa.flatMap(i=>opts(i).filter(n=>n!==a&&n!==b).map(n=>[i,n]));
+    if(changes.length){record('Hidden pair',`In ${unitLabel(u)}, only ${aa.map(label).join(' and ')} can contain ${a} or ${b}. Therefore these two cells must contain ${a} and ${b}, and all their other candidates can be removed.`,u,changes);acted=true}
+   }
+  }}if(acted)continue;
+  // Naked triples: three cells collectively contain exactly three candidate digits.
+  for(const u of units){if(acted)break;const empties=u.filter(i=>!board[i]&&opts(i).length>=2&&opts(i).length<=3);
+   for(let a=0;a<empties.length-2&&!acted;a++)for(let b=a+1;b<empties.length-1&&!acted;b++)for(let c=b+1;c<empties.length&&!acted;c++){
+    const cells=[empties[a],empties[b],empties[c]],ns=[...new Set(cells.flatMap(opts))];
+    if(ns.length===3&&eliminate('Naked triple',`${cells.map(label).join(', ')} collectively contain only ${ns.join(', ')} in ${unitLabel(u)}. Those digits must fill these three cells, so remove them from other cells in the unit.`,cells,u.filter(i=>!cells.includes(i)),ns))acted=true;
+   }
+  }if(acted)continue;
+  // Hidden triples: three digits occur only in the same three cells of a unit.
+  for(const u of units){if(acted)break;const missing=[1,2,3,4,5,6,7,8,9].filter(n=>!u.some(i=>board[i]===n));
+   for(let a=0;a<missing.length-2&&!acted;a++)for(let b=a+1;b<missing.length-1&&!acted;b++)for(let c=b+1;c<missing.length&&!acted;c++){
+    const ns=[missing[a],missing[b],missing[c]],spots=ns.map(n=>u.filter(i=>!board[i]&&opts(i).includes(n)));
+    if(spots.some(x=>x.length<2||x.length>3))continue;
+    const cells=[...new Set(spots.flat())];if(cells.length!==3)continue;
+    const changes=cells.flatMap(i=>opts(i).filter(n=>!ns.includes(n)).map(n=>[i,n]));
+    if(changes.length){record('Hidden triple',`In ${unitLabel(u)}, the digits ${ns.join(', ')} are confined to ${cells.map(label).join(', ')}. Therefore all other candidates in those three cells can be removed.`,cells,changes);acted=true}
+   }
+  }if(acted)continue;
+  // X-Wing: identical two-column positions in two rows, or vice versa.
+  for(let n=1;n<=9&&!acted;n++)for(const axis of [row,col]){
+   if(acted)break;const lines=Array.from({length:9},(_,k)=>range.filter(i=>axis(i)===k));
+   const positions=lines.map(u=>u.some(i=>board[i]===n)?[]:u.filter(i=>!board[i]&&opts(i).includes(n)));
+   for(let a=0;a<8&&!acted;a++)for(let b=a+1;b<9&&!acted;b++){
+    if(positions[a].length!==2||positions[b].length!==2)continue;
+    const other=axis===row?col:row;
+    if(positions[a].every(i=>positions[b].some(j=>other(i)===other(j)))){
+     const base=[...positions[a],...positions[b]],columns=positions[a].map(other);
+     const targets=range.filter(i=>!base.includes(i)&&columns.includes(other(i)));
+     if(eliminate('X-Wing',`For ${n}, ${axis===row?'rows':'columns'} ${a+1} and ${b+1} each have the same two possible ${axis===row?'columns':'rows'}. One ${n} must occupy each line, so ${n} is excluded from the other cells in those two ${axis===row?'columns':'rows'}.`,base,targets,[n]))acted=true;
+    }
+   }
+  }if(acted)continue;
+  // Generalized naked and hidden quads.
+  for(const u of units){if(acted)break;
+   const es=u.filter(i=>!board[i]&&opts(i).length>=2&&opts(i).length<=4);
+   for(let a=0;a<es.length-3&&!acted;a++)for(let b=a+1;b<es.length-2&&!acted;b++)for(let c=b+1;c<es.length-1&&!acted;c++)for(let d=c+1;d<es.length&&!acted;d++){
+    const cells=[es[a],es[b],es[c],es[d]], ns=[...new Set(cells.flatMap(opts))];
+    if(ns.length===4&&eliminate('Naked quad',`${cells.map(label).join(', ')} collectively contain only ${ns.join(', ')} in ${unitLabel(u)}. These four numbers must fill those four cells.`,cells,u.filter(i=>!cells.includes(i)),ns))acted=true;
+   }
+  }if(acted)continue;
+  for(const u of units){if(acted)break;const ns=[1,2,3,4,5,6,7,8,9].filter(n=>!u.some(i=>board[i]===n));
+   for(let a=0;a<ns.length-3&&!acted;a++)for(let b=a+1;b<ns.length-2&&!acted;b++)for(let c=b+1;c<ns.length-1&&!acted;c++)for(let d=c+1;d<ns.length&&!acted;d++){
+    const ds=[ns[a],ns[b],ns[c],ns[d]], positions=ds.map(n=>u.filter(i=>!board[i]&&opts(i).includes(n)));
+    if(positions.some(x=>x.length<2||x.length>4))continue;
+    const cells=[...new Set(positions.flat())];if(cells.length!==4)continue;
+    const changes=cells.flatMap(i=>opts(i).filter(n=>!ds.includes(n)).map(n=>[i,n]));
+    if(changes.length){record('Hidden quad',`In ${unitLabel(u)}, ${ds.join(', ')} can occur only in ${cells.map(label).join(', ')}. Remove other candidates from these four cells.`,cells,changes);acted=true}
+   }
+  }if(acted)continue;
+  // Generalized fish: Swordfish (three lines) and Jellyfish (four lines).
+  for(const size of [3,4]){if(acted)break;
+   for(let n=1;n<=9&&!acted;n++)for(const axis of [row,col]){
+    if(acted)break;const cross=axis===row?col:row;
+    const lines=Array.from({length:9},(_,k)=>range.filter(i=>axis(i)===k));
+    const positions=lines.map(u=>u.some(i=>board[i]===n)?[]:u.filter(i=>!board[i]&&opts(i).includes(n)));
+    const eligible=[...Array(9).keys()].filter(k=>positions[k].length>=2&&positions[k].length<=size);
+    const search=(picked,start)=>{
+     if(acted)return;
+     if(picked.length===size){const base=picked.flatMap(k=>positions[k]),crosses=[...new Set(base.map(cross))];if(crosses.length!==size)return;
+      const targets=range.filter(i=>!picked.includes(axis(i))&&crosses.includes(cross(i)));
+      if(eliminate(size===3?'Swordfish':'Jellyfish',`For ${n}, ${size} ${axis===row?'rows':'columns'} (${picked.map(k=>k+1).join(', ')}) restrict the digit to the same ${size} ${axis===row?'columns':'rows'}. Remove ${n} from those cross-lines outside the pattern.`,base,targets,[n]))acted=true;
+      return;
+     }
+     for(let t=start;t<eligible.length&&!acted;t++)search([...picked,eligible[t]],t+1);
+    };search([],0);
+   }
+  }if(acted)continue;
+  // Finned X-Wing: two base lines, two shared cross-lines, and extra
+  // fin candidates confined to the box of one corner. Only eliminate
+  // candidates that see every fin AND the opposite base-line corner.
+  for(let n=1;n<=9&&!acted;n++)for(const axis of [row,col]){
+   if(acted)break;
+   const cross=axis===row?col:row;
+   const lines=Array.from({length:9},(_,k)=>range.filter(i=>axis(i)===k));
+   const positions=lines.map(u=>u.some(i=>board[i]===n)?[]:u.filter(i=>!board[i]&&opts(i).includes(n)));
+   for(let a=0;a<9&&!acted;a++){
+    if(positions[a].length!==2)continue;
+    const [c1,c2]=positions[a].map(cross);
+    for(let b=0;b<9&&!acted;b++){
+     if(a===b||positions[b].length<3)continue;
+     const corners=positions[b].filter(i=>cross(i)===c1||cross(i)===c2);
+     if(corners.length!==2)continue;
+     const fins=positions[b].filter(i=>cross(i)!==c1&&cross(i)!==c2);
+     if(!fins.length)continue;
+     for(const corner of corners){
+      if(acted)break;
+      if(!fins.every(i=>box(i)===box(corner)))continue;
+      const baseCorner=positions[a].find(i=>cross(i)===cross(corner));
+      const targets=range.filter(i=>!board[i]&&axis(i)!==a&&axis(i)!==b&&cross(i)===cross(corner)&&box(i)===box(corner)&&fins.every(f=>peers[i].includes(f))&&peers[i].includes(baseCorner));
+      if(eliminate('Finned X-Wing',`For ${n}, ${axis===row?'rows':'columns'} ${a+1} and ${b+1} form an X-Wing with extra fin candidates at ${fins.map(label).join(', ')}. A candidate at the highlighted target sees every fin and the opposite corner ${label(baseCorner)}, so it cannot be ${n}.`,[...positions[a],...positions[b]],targets,[n]))acted=true;
+     }
+    }
+   }
+  }if(acted)continue;
+  // XY-Wing: bivalue pivot XY with pincers XZ and YZ. Any common peer of the pincers cannot be Z.
+  const biv=range.filter(i=>!board[i]&&opts(i).length===2);
+  for(const p of biv){if(acted)break;const [x,y]=opts(p);
+   for(const a of biv){if(acted)break;if(a===p||!peers[p].includes(a))continue;
+    const ca=opts(a),z=ca.find(n=>n!==x&&n!==y);if(!ca.includes(x)||z===undefined)continue;
+    for(const b of biv){if(acted)break;if(b===p||b===a||!peers[p].includes(b))continue;
+     const cb=opts(b);if(cb.length!==2||!cb.includes(y)||!cb.includes(z))continue;
+     const targets=peers[a].filter(i=>peers[b].includes(i)&&i!==p&&i!==a&&i!==b);
+     if(eliminate('XY-Wing',`${label(p)} is ${x}/${y}. If it is ${x}, ${label(a)} must be ${z}; if it is ${y}, ${label(b)} must be ${z}. Either way, cells seeing both pincers cannot contain ${z}.`,[p,a,b],targets,[z]))acted=true;
+    }
+   }
+  }if(acted)continue;
+  // XYZ-Wing: pivot XYZ and two pincers XZ, YZ; eliminate Z from cells seeing all three.
+  for(const p of range){if(acted)break;if(board[p]||opts(p).length!==3)continue;const cp=opts(p);
+   const wings=peers[p].filter(i=>!board[i]&&opts(i).length===2&&opts(i).every(n=>cp.includes(n)));
+   for(let a=0;a<wings.length&&!acted;a++)for(let b=a+1;b<wings.length&&!acted;b++){
+    const wa=opts(wings[a]),wb=opts(wings[b]),shared=wa.filter(n=>wb.includes(n));
+    if(shared.length!==1||[...new Set([...wa,...wb])].length!==3)continue;
+    const z=shared[0],targets=peers[p].filter(i=>peers[wings[a]].includes(i)&&peers[wings[b]].includes(i));
+    if(eliminate('XYZ-Wing',`Pivot ${label(p)} contains ${cp.join('/')}; wings ${label(wings[a])} and ${label(wings[b])} share ${z}. At least one of these three cells must be ${z}, so any cell seeing all three cannot be ${z}.`,[p,wings[a],wings[b]],targets,[z]))acted=true;
+   }
+  }if(acted)continue;
+  // Skyscraper: two strong links for the same digit in parallel rows or columns,
+  // sharing one cross-line. At least one unmatched endpoint is true.
+  for(let n=1;n<=9&&!acted;n++)for(const axis of [row,col]){
+   if(acted)break;const cross=axis===row?col:row;
+   const lines=Array.from({length:9},(_,k)=>range.filter(i=>axis(i)===k));
+   const pairs=lines.map(u=>u.some(i=>board[i]===n)?[]:u.filter(i=>!board[i]&&opts(i).includes(n)));
+   for(let a=0;a<8&&!acted;a++)for(let b=a+1;b<9&&!acted;b++){
+    if(pairs[a].length!==2||pairs[b].length!==2)continue;
+    const shared=pairs[a].filter(i=>pairs[b].some(j=>cross(i)===cross(j)));
+    if(shared.length!==1)continue;
+    const match=pairs[b].find(j=>cross(j)===cross(shared[0]));
+    const ends=[pairs[a].find(i=>i!==shared[0]),pairs[b].find(i=>i!==match)];
+    const targets=peers[ends[0]].filter(i=>peers[ends[1]].includes(i)&&!ends.includes(i));
+    if(eliminate('Skyscraper',`For ${n}, two strong links share ${axis===row?'column':'row'} ${cross(shared[0])+1}. At least one of ${ends.map(label).join(' or ')} must be ${n}.`,[...pairs[a],...pairs[b]],targets,[n]))acted=true;
+   }
+  }if(acted)continue;
+  // Two-string kite: one strong row link and one strong column link, joined through a box.
+  for(let n=1;n<=9&&!acted;n++){
+   const rs=units.slice(0,9).map(u=>u.some(i=>board[i]===n)?[]:u.filter(i=>!board[i]&&opts(i).includes(n)));
+   const cs=units.slice(9,18).map(u=>u.some(i=>board[i]===n)?[]:u.filter(i=>!board[i]&&opts(i).includes(n)));
+   for(const rp of rs){if(acted)break;if(rp.length!==2)continue;
+    for(const cp of cs){if(acted)break;if(cp.length!==2)continue;
+     for(const ri of rp){if(acted)break;for(const ci of cp){if(acted)break;
+      if(ri===ci||box(ri)!==box(ci))continue;
+      const re=rp.find(i=>i!==ri),ce=cp.find(i=>i!==ci);
+      if(re===ce)continue;
+      const targets=peers[re].filter(i=>peers[ce].includes(i)&&i!==ri&&i!==ci);
+      if(eliminate('Two-string kite',`The strong row link ${rp.map(label).join('/')} and column link ${cp.map(label).join('/')} meet in box ${box(ri)+1}. At least one of ${label(re)} and ${label(ce)} is ${n}.`,[...rp,...cp],targets,[n]))acted=true;
+     }}
+    }
+   }
+  }if(acted)continue;
+  // Simple coloring: conjugate (exactly-two) links alternate colors.
+  for(let n=1;n<=9&&!acted;n++){
+   const adj=Array.from({length:81},()=>new Set());
+   for(const u of units){if(u.some(i=>board[i]===n))continue;const s=u.filter(i=>!board[i]&&opts(i).includes(n));if(s.length===2){adj[s[0]].add(s[1]);adj[s[1]].add(s[0])}}
+   const visited=new Set();
+   for(const root of range){if(acted)break;if(!adj[root].size||visited.has(root))continue;
+    const color=new Map([[root,0]]),queue=[root];visited.add(root);
+    for(let h=0;h<queue.length;h++)for(const v of adj[queue[h]])if(!color.has(v)){color.set(v,1-color.get(queue[h]));visited.add(v);queue.push(v)}
+    const groups=[queue.filter(i=>color.get(i)===0),queue.filter(i=>color.get(i)===1)];
+    for(let c=0;c<2&&!acted;c++){
+     let clash=false;for(let a=0;a<groups[c].length&&!clash;a++)for(let b=a+1;b<groups[c].length;b++)if(peers[groups[c][a]].includes(groups[c][b])){clash=true;break}
+     if(clash&&eliminate('Simple coloring',`Color ${c+1} contains two cells that see each other, so that color cannot contain ${n}. The opposite color must be true.`,queue,groups[c],[n]))acted=true;
+    }
+    if(acted)break;
+    const targets=range.filter(i=>!board[i]&&!color.has(i)&&groups[0].some(a=>peers[i].includes(a))&&groups[1].some(b=>peers[i].includes(b)));
+    if(eliminate('Simple coloring',`The two alternating colors represent opposite possibilities for ${n}. A cell that sees both colors cannot contain ${n}.`,queue,targets,[n]))acted=true;
+   }
+  }if(acted)continue;
+  // XY-Chains: connected bivalue cells. A link passes the shared candidate,
+  // and a chain whose endpoints have the same remaining candidate eliminates it from their common peers.
+  let chainVisits=0;
+  for(const root of biv){if(acted||chainVisits>5000)break;
+   for(const targetDigit of opts(root)){if(acted)break;
+    const startDigit=opts(root).find(n=>n!==targetDigit);
+    const walk=(cell,need,path)=>{
+     if(acted||path.length>8||++chainVisits>5000)return;
+     for(const next of biv){if(acted)break;if(path.includes(next)||!peers[cell].includes(next)||!opts(next).includes(need))continue;
+      const other=opts(next).find(n=>n!==need),newPath=[...path,next];
+      if(other===targetDigit&&newPath.length>=3){
+       const targets=peers[root].filter(i=>peers[next].includes(i)&&!newPath.includes(i));
+       if(eliminate('XY-Chain',`Following the bivalue chain ${newPath.map(label).join(' → ')} forces ${targetDigit} at one endpoint or the other. Any cell seeing both endpoints cannot be ${targetDigit}.`,newPath,targets,[targetDigit])){acted=true;return}
+      }
+      if(newPath.length<9)walk(next,other,newPath);
+     }
+    };walk(root,startDigit,[root]);
+   }
+  }if(acted)continue;
+  // W-Wing: identical bivalue endpoints and a conjugate pair for one candidate.
+  for(let a=0;a<biv.length&&!acted;a++)for(let b=a+1;b<biv.length&&!acted;b++){
+   const left=biv[a],right=biv[b],pair=opts(left);
+   if(peers[left].includes(right)||opts(right).join(',')!==pair.join(','))continue;
+   for(const linkDigit of pair){if(acted)break;
+    const other=pair.find(n=>n!==linkDigit);
+    for(const u of units){if(acted)break;if(u.some(i=>board[i]===linkDigit))continue;
+     const ends=u.filter(i=>!board[i]&&opts(i).includes(linkDigit));if(ends.length!==2)continue;
+     for(const [x,y] of [[ends[0],ends[1]],[ends[1],ends[0]]]){
+      if(x===left||y===right||!peers[left].includes(x)||!peers[right].includes(y))continue;
+      const targets=peers[left].filter(i=>peers[right].includes(i)&&i!==left&&i!==right);
+      if(eliminate('W-Wing',`${label(left)} and ${label(right)} each contain ${pair.join('/')}. The strong ${linkDigit} link between ${label(x)} and ${label(y)} prevents both endpoints being ${linkDigit}; at least one endpoint must be ${other}.`,[left,right,x,y],targets,[other])){acted=true;break}
+     }
+    }
+   }
+  }if(acted)continue;
+  // Unique Rectangle Type 1. Only use when the puzzle is known to have a unique solution.
+  // A deadly pattern has four corners in two rows, columns and exactly two boxes.
+  for(let r1=0;r1<8&&!acted;r1++)for(let r2=r1+1;r2<9&&!acted;r2++)for(let c1=0;c1<8&&!acted;c1++)for(let c2=c1+1;c2<9&&!acted;c2++){
+   const corners=[r1*9+c1,r1*9+c2,r2*9+c1,r2*9+c2];
+   if(corners.some(i=>board[i])||new Set(corners.map(box)).size!==2)continue;
+   const cs=corners.map(opts);
+   for(let k=0;k<4&&!acted;k++){
+    const base=corners.filter((_,j)=>j!==k),other=cs[k];
+    if(base.some(i=>opts(i).length!==2)||other.length<=2)continue;
+    const pair=opts(base[0]);if(!base.every(i=>opts(i).join(',')===pair.join(',')))continue;
+    if(!pair.every(n=>other.includes(n)))continue;
+    if(eliminate('Unique Rectangle Type 1',`The four corners ${corners.map(label).join(', ')} span two rows, columns and boxes. If ${label(corners[k])} were restricted to ${pair.join('/')}, the rectangle would allow two interchangeable solutions. Assuming this puzzle has one unique solution, remove those candidates from ${label(corners[k])}.`,corners,[corners[k]],pair))acted=true;
+   }
+  }if(acted)continue;
+  // BUG+1: all remaining unsolved cells are bivalue except one trivalue cell,
+  // and one digit at the exception occurs three times in each of its units.
+  const open=range.filter(i=>!board[i]),tri=open.filter(i=>opts(i).length===3);
+  if(tri.length===1&&open.every(i=>opts(i).length===2||i===tri[0])){
+   const pivot=tri[0];for(const n of opts(pivot)){
+    if(acted)break;
+    const counts=units.filter(u=>u.includes(pivot)).map(u=>u.filter(i=>!board[i]&&opts(i).includes(n)).length);
+    if(counts.every(v=>v===3)){
+     record('BUG+1',`All other unsolved cells have two candidates. At ${label(pivot)}, ${n} is the extra candidate that occurs three times in its row, column and box. To avoid an ambiguous bivalue universal grave, ${label(pivot)} must be ${n}. This deduction assumes a uniquely solvable puzzle.`,[pivot,...peers[pivot].filter(i=>!board[i])],[],{i:pivot,n});acted=true;
+    }
+   }
+  }if(acted)continue;
+  // X-Chains: alternating strong/weak candidate links for one digit.
+  // A strong link is a unit containing exactly two positions for the digit;
+  // a weak link joins any two positions that see one another.
+  for(let n=1;n<=9&&!acted;n++){
+   const nodes=range.filter(i=>!board[i]&&opts(i).includes(n));
+   const strong=Array.from({length:81},()=>new Set());
+   for(const u of units){if(u.some(i=>board[i]===n))continue;
+    const ps=u.filter(i=>!board[i]&&opts(i).includes(n));
+    if(ps.length===2){strong[ps[0]].add(ps[1]);strong[ps[1]].add(ps[0])}
+   }
+   let visits=0;
+   for(const start of nodes){if(acted||visits>14000)break;
+    const dfs=(current,nextStrong,path)=>{
+     if(acted||path.length>9||++visits>14000)return;
+     const neighbors=nextStrong?[...strong[current]]:nodes.filter(i=>i!==current&&peers[current].includes(i));
+     for(const v of neighbors){if(acted)break;if(path.includes(v))continue;
+      const np=[...path,v];
+      // Strong, weak, strong, ..., strong => at least one endpoint is true.
+      if(nextStrong&&np.length>=4){
+       const targets=peers[start].filter(i=>peers[v].includes(i)&&!np.includes(i));
+       if(eliminate('X-Chain',`For ${n}, follow alternating strong and weak links through ${np.map(label).join(' → ')}. The first and last candidates cannot both be false, so their common peers cannot contain ${n}.`,np,targets,[n])){acted=true;return}
+      }
+      dfs(v,!nextStrong,np);
+     }
+    };dfs(start,true,[start]);
+   }
+  }if(acted)continue;
+  // Empty Rectangle: a box's candidate locations lie in the union of one row
+  // and one column. A conjugate link outside the box then eliminates a candidate.
+  for(let n=1;n<=9&&!acted;n++)for(let b=0;b<9&&!acted;b++){
+   const inBox=units[18+b].filter(i=>!board[i]&&opts(i).includes(n));
+   if(inBox.length<2)continue;
+   for(let r=Math.floor(b/3)*3;r<Math.floor(b/3)*3+3&&!acted;r++)
+   for(let c=(b%3)*3;c<(b%3)*3+3&&!acted;c++){
+    if(!inBox.every(i=>row(i)===r||col(i)===c))continue;
+    if(!inBox.some(i=>row(i)===r&&col(i)!==c)||!inBox.some(i=>col(i)===c&&row(i)!==r))continue;
+    const line=units[r],outside=line.filter(i=>box(i)!==b&&!board[i]&&opts(i).includes(n));
+    if(outside.length!==2)continue;
+    for(const pivot of outside){if(acted)break;
+     const other=outside.find(i=>i!==pivot);
+     // Pivot must be in the column of the empty rectangle intersection.
+     if(col(pivot)!==c)continue;
+     const targets=units[9+col(other)].filter(i=>row(i)===r&&box(i)!==b&&i!==other);
+     if(eliminate('Empty Rectangle',`In box ${b+1}, every ${n} candidate lies in row ${r+1} or column ${c+1}. The strong row link ${label(pivot)}–${label(other)} then rules out ${n} at their intersecting target.`,[...inBox,...outside],targets,[n]))acted=true;
+    }
+   }
+  }if(acted)continue;
+  // General AIC: strong and weak implications may connect different digits
+  // in the same bivalue cell, or the same digit across conjugate unit positions.
+  // An alternating path beginning and ending with a strong link has at least
+  // one true endpoint. Only common-peer eliminations are emitted.
+  {
+   const keys=[],index=new Map(),strong=[],weak=[];
+   for(const i of range)if(!board[i])for(const n of opts(i)){
+    const k=`${i}:${n}`;index.set(k,keys.length);keys.push({i,n});strong.push(new Set());weak.push(new Set());
+   }
+   const edge=(a,b,isStrong)=>{if(a===undefined||b===undefined||a===b)return;weak[a].add(b);weak[b].add(a);if(isStrong){strong[a].add(b);strong[b].add(a)}};
+   for(const i of range)if(!board[i]){
+    const cs=opts(i);
+    for(let a=0;a<cs.length;a++)for(let b=a+1;b<cs.length;b++)edge(index.get(`${i}:${cs[a]}`),index.get(`${i}:${cs[b]}`),cs.length===2);
+   }
+   for(const u of units)for(let n=1;n<=9;n++){
+    if(u.some(i=>board[i]===n))continue;
+    const ps=u.filter(i=>!board[i]&&opts(i).includes(n));
+    for(let a=0;a<ps.length;a++)for(let b=a+1;b<ps.length;b++)edge(index.get(`${ps[a]}:${n}`),index.get(`${ps[b]}:${n}`),ps.length===2);
+   }
+   let searches=0;
+   for(let st=0;st<keys.length&&!acted&&searches<65000;st++){
+    const dfs=(at,strongNext,path,seen)=>{
+     if(acted||path.length>=9||++searches>65000)return;
+     for(const next of (strongNext?strong[at]:weak[at])){
+      if(acted)break;if(seen.has(next))continue;
+      const np=[...path,next],a=keys[st],b=keys[next];
+      if(strongNext&&np.length>=4&&a.n===b.n&&a.i!==b.i){
+       const targets=peers[a.i].filter(i=>i!==b.i&&!np.some(v=>keys[v].i===i)&&peers[b.i].includes(i));
+       if(eliminate('Alternating Inference Chain',`Follow the alternating strong and weak links ${np.map(v=>`${label(keys[v].i)}=${keys[v].n}`).join(' → ')}. At least one endpoint must be true, so their common peers cannot contain ${a.n}.`,np.map(v=>keys[v].i),targets,[a.n])){acted=true;return}
+      }
+      seen.add(next);dfs(next,!strongNext,np,seen);seen.delete(next);
+     }
+    };
+    dfs(st,true,[st],new Set([st]));
+   }
+  }if(acted)continue;
+  // ALS-XZ: two disjoint almost locked sets (N cells with N+1 candidates).
+  // If their common candidate X is restricted (every X in set A sees every
+  // X in set B), another common candidate Z can be removed from any cell
+  // that sees every Z occurrence across both sets.
+  {
+   const als=[];
+   for(const u of units){
+    const es=u.filter(i=>!board[i]&&opts(i).length>=2&&opts(i).length<=4);
+    const collect=(start,chosen)=>{
+     if(chosen.length){
+      const digits=[...new Set(chosen.flatMap(opts))];
+      if(digits.length===chosen.length+1)als.push({cells:chosen.slice(),digits});
+      if(chosen.length>=3||digits.length>chosen.length+2)return;
+     }
+     for(let j=start;j<es.length;j++)collect(j+1,[...chosen,es[j]]);
+    };collect(0,[]);
+   }
+   let checked=0;
+   for(let a=0;a<als.length&&!acted&&checked<20000;a++)for(let b=a+1;b<als.length&&!acted&&checked<20000;b++){
+    const A=als[a],B=als[b];if(A.cells.some(i=>B.cells.includes(i)))continue;
+    const common=A.digits.filter(n=>B.digits.includes(n));if(common.length<2)continue;
+    checked++;
+    for(const x of common){if(acted)break;
+     const ax=A.cells.filter(i=>opts(i).includes(x)),bx=B.cells.filter(i=>opts(i).includes(x));
+     if(!ax.every(i=>bx.every(j=>peers[i].includes(j))))continue;
+     for(const z of common){if(z===x||acted)continue;
+      const sources=[...A.cells,...B.cells].filter(i=>opts(i).includes(z));
+      const targets=range.filter(i=>!board[i]&&!A.cells.includes(i)&&!B.cells.includes(i)&&sources.every(j=>peers[i].includes(j)));
+      if(eliminate('ALS-XZ',`The highlighted almost locked sets share ${x} and ${z}. Every ${x} in the first set sees every ${x} in the second, so at least one set must contain ${z}. Any cell seeing all possible ${z} positions in both sets cannot be ${z}.`,[...A.cells,...B.cells],targets,[z]))acted=true;
+     }
+    }
+   }
+  }if(acted)continue;
+  break;
+ }
+ return {trace,board,removed,bad:contradiction()};
+}
+function advancedHint(){
+ const a=state.values.slice();if(!valid(a))return message('Resolve duplicate entries before requesting a logical hint.');
+ const wrong=range.filter(i=>a[i]&&!state.puzzle[i]&&a[i]!==state.solution[i]);
+ if(wrong.length)return message(`Check ${wrong.map(label).join(', ')} first: those entries disagree with the verified solution.`,wrong);
+ const result=logicEngine(a,100);
+ const step=result.trace[0];
+ if(step)return setSteps([{text:`Suggested next deduction\n\n${step.text}\n\nThe highlighted cells are involved. This is a logical step, not a guess.`,hl:step.hl,board:step.board}]);
+ const i=range.find(i=>!a[i]);return message(i===undefined?'Puzzle complete.':`No deduction was found among the supported techniques. Try examining ${label(i)}; candidates: ${candidates(a,i).join(', ')}.`,i===undefined?[]:[i]);
+}
+function explain(i,n,auto=false){
+ if(state.puzzle[i])return message(`${label(i)} is a given clue and cannot be changed.`,[i]);
+ const a=state.values.slice();a[i]=0;
+ if(!valid(a))return message(`The current board already contains duplicate entries. Fix the highlighted conflicts before investigating ${label(i)}.`,[i]);
+ const unverified=range.filter(j=>j!==i&&a[j]&&!state.puzzle[j]&&a[j]!==state.solution[j]);
+ if(unverified.length)return message(`Cannot prove this yet: ${unverified.map(label).join(', ')} contain entries that do not match this puzzle's solution. Correct or erase them first, because a contradiction based on an incorrect earlier entry would be misleading.`,unverified);
+ const direct=peers[i].filter(j=>a[j]===n);
+ if(direct.length){const j=direct[0],kind=row(i)===row(j)?'row':col(i)===col(j)?'column':'3×3 box';return setSteps([{text:`${n} cannot go in ${label(i)}. ${label(j)} already contains ${n} in the same ${kind}.`,hl:[i,j],bad:[i]}])}
+ const options=candidates(a,i);
+ if(!options.includes(n))return message(`${n} is excluded by the current board.`,[i]);
+ for(const unit of units){
+  for(let digit=1;digit<=9;digit++){
+   if(digit===n||unit.some(j=>a[j]===digit))continue;
+   const spots=unit.filter(j=>!a[j]&&candidates(a,j).includes(digit));
+   if(spots.length===1&&spots[0]===i){
+    const others=unit.filter(j=>j!==i&&!a[j]);
+    const reasons=others.map(j=>{const blocker=peers[j].find(k=>a[k]===digit);return blocker===undefined?`${label(j)}: unavailable`:`${label(j)} is ruled out by ${label(blocker)} = ${digit}`});
+    const kind=row(unit[0])===row(unit[8])?'row':col(unit[0])===col(unit[8])?'column':'3×3 box';
+    return setSteps([{text:`${label(i)} must be ${digit}, so it cannot be ${n}. This ${kind} still needs ${digit}, and ${label(i)} is its only available position.\n\n${reasons.join('\n')}\n\nTherefore ${n} cannot go in ${label(i)}. This is a direct logical elimination, not a hypothetical contradiction.`,hl:[...unit,...others],bad:[i],focus:i}]);
+   }
+  }
+ }
+ const solutions=solve(a,2);
+ if(!solutions.length)return message('The current board has no valid solution. Undo a recent entry before investigating further.',[i]);
+ if(solutions.some(s=>s[i]===n)){
+   const forced=options.length===1;
+   return message(forced?`${n} must go in ${label(i)}: every other digit is blocked by the same row, column or box.`:`${n} is currently possible in ${label(i)}. There is no justified elimination from the present board. ${solutions.length===1?'It matches the unique solution, but that is not itself a human deduction.':'More than one solution exists for the current entries.'}`,[i]);
+ }
+ const test=a.slice();test[i]=n;
+ const result=logicEngine(test,160);
+ const steps=[{board:test.slice(),text:`Step 1: Temporarily assume ${label(i)} = ${n}. This is a test, not a permanent entry. The purple cell is the assumption.`,hl:[i],assume:[i],focus:i}];
+ for(const t of result.trace){
+  steps.push({text:`Step ${steps.length+1}: ${t.text}\n\nPurple numbers are temporary deductions. Yellow marks cells involved in this step.`,hl:t.hl,board:t.board,assume:[i],focus:t.removed?.[0]?.i??-1,removedAll:t.removedAll});
+ }
+ if(result.bad){
+  const f=result.bad;let text,hl=[],focus=-1;
+  if(f.type==='cell'){
+   focus=f.i;
+   const reasons=[];
+   for(let d=1;d<=9;d++){
+    const j=peers[f.i].find(k=>result.board[k]===d);
+    if(j!==undefined)reasons.push(`${d}: blocked by ${label(j)} = ${d}${j===i?' (your assumption)':a[j]?' (existing entry)':' (temporary forced move)'}`);
+    else if(result.removed[f.i].has(d))reasons.push(`${d}: eliminated by an earlier logical technique (review Previous steps)`);
+    else reasons.push(`${d}: no documented blocker; proof needs review`);
+   }
+   text=`CONTRADICTION: ${label(f.i)} has no possible digit under the temporary assumption ${label(i)} = ${n}.\n\n${reasons.join('\n')}\n\nEvery cell must eventually contain one digit. This does NOT mean ${label(f.i)} should stay blank in the actual puzzle. Reject only the temporary ${n} in ${label(i)}; the real puzzle is unchanged.`;
+   hl=[f.i];
+  }else{
+   const u=f.unit,d=f.n;const name=row(u[0])===row(u[8])?`row ${row(u[0])+1}`:col(u[0])===col(u[8])?`column ${col(u[0])+1}`:`box ${box(u[0])+1}`;
+   const details=u.filter(j=>!result.board[j]).map(j=>{
+    const k=peers[j].find(x=>result.board[x]===d);
+    return k!==undefined?`${label(j)}: blocked by ${label(k)} = ${d}`:result.removed[j].has(d)?`${label(j)}: ${d} eliminated in an earlier logical step`:`${label(j)}: no documented elimination`;
+   });
+   text=`CONTRADICTION: ${name} still needs its own ${d}, but no empty cell can contain it after assuming ${label(i)} = ${n}.\n\n${details.join('\n')}\n\nA ${d} elsewhere in the puzzle does not fill this ${name}. Reject the assumption ${label(i)} = ${n}. The real puzzle is unchanged.`;
+   hl=u;
+  }
+  steps.push({text,hl,bad:[i],board:result.board.slice(),focus,removedAll:result.removed.flatMap((set,k)=>[...set].map(d=>({i:k,n:d})))});
+ }else{
+  steps.push({text:`The candidate ${n} at ${label(i)} is incompatible with the puzzle's unique solution, but the supported logical techniques (singles, subsets, fish, wings, coloring and chains) did not establish a complete contradiction in this run. This is a solver-verified elimination, NOT a demonstrated logical proof. The number is not painted red as a proved contradiction.`,hl:[i],board:result.board.slice(),removedAll:result.removed.flatMap((set,k)=>[...set].map(d=>({i:k,n:d})))});
+ }
+ setSteps(steps);
+}
+function input(n){chosen=n;if(state.puzzle[selected]){render();return}let a=state.values.slice();const previousValue=a[selected];a[selected]=0;let wrong=state.solution[selected]!==n;const wasWrong=state.values[selected]!==0&&state.values[selected]!==state.solution[selected];push();if(noteMode){let s=new Set(state.notes[selected]);s.has(n)?s.delete(n):s.add(n);state.notes[selected]=[...s].sort()}else{state.values[selected]=n;state.notes[selected]=[];if(!noteMode&&wrong&&!wasWrong){mistakes++;statAdd('mistakes')}if(!noteMode&&!wrong&&previousValue!==n)statAdd('correct');if(!noteMode&&$('autoRemoveNotes').checked){for(const j of peers[selected])state.notes[j]=state.notes[j].filter(x=>x!==n)}if(!noteMode&&$('automatic').checked&&wrong)explain(selected,n,true);else if(!noteMode&&$('automatic').checked&&!wrong)message(`${n} is correct in ${label(selected)}.`,[selected]);else{highlights=[];rejected=[];assumptions=[];proofValues=null;proofFocus=-1;explanations=[];step=0;$('explanation').textContent='Select a cell and number, then tap Explain.';$('previous').disabled=true;$('next').disabled=true}}render()}function hint(){let a=state.values.slice();for(let i=0;i<81;i++)if(a[i]&&a[i]!==state.solution[i])return message(`Before proceeding, check ${label(i)}. Its current entry conflicts with the puzzle's unique solution. Select it and ask for an explanation.`,[i]);for(let i=0;i<81;i++)if(!a[i]){let c=candidates(a,i);if(c.length===1)return message(`Naked single: ${label(i)} must contain ${c[0]}. Every other digit is excluded by a number in the same row, column, or box.`,[i])}for(let unit of units)for(let n=1;n<=9;n++){if(unit.some(i=>a[i]===n))continue;let places=unit.filter(i=>!a[i]&&candidates(a,i).includes(n));if(places.length===1)return message(`Hidden single: ${n} has only one available position in this highlighted row, column, or box: ${label(places[0])}.`,unit)}let i=range.find(i=>!a[i]);if(i!==undefined)return message(`Try ${label(i)}. Its current candidates are ${candidates(a,i).join(', ')}. None is yet forced by a basic single. Select a candidate and use Explain to investigate further.`,[i]);message('All cells are filled. Check whether the puzzle is solved.')}function newGame(){let level=$('difficulty').value;startPuzzle(makePuzzle(level),level)}$('newGame').onclick=()=>{if(confirm('Start a new puzzle? Your current puzzle will be replaced.'))newGame()};$('daily').onclick=()=>{const level=$('difficulty').value,day=(()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')})();if(!confirm(`Open ${day} daily ${level} challenge? Your current game will be replaced.`))return;let previous=null;try{previous=JSON.parse(localStorage.getItem('sudokuDaily-'+day+'-'+level))}catch(e){}if(previous?.state?.values?.length===81){state=previous.state;mistakes=previous.mistakes||0;selected=range.find(i=>!state.values[i])??0;undo=[];redo=[];clearProof();message(`Resumed ${day} daily challenge.`);render()}else startPuzzle(transformedPuzzle(level,dateSeed(day,level)),level,'daily',day)};
+$('analyzeDifficulty').onclick=()=>{const result=logicEngine(state.puzzle,180),kinds=[...new Set(result.trace.map(t=>t.kind))];const unresolved=result.board.some(x=>!x);message(`Technique analysis (${state.level} library label):\n${kinds.length?kinds.join(', '):'No deductions found'}.\n${unresolved?'This engine could not finish the puzzle with its supported techniques, so a precise difficulty rating is unavailable.':'The engine solved this puzzle using the listed techniques. This is an algorithmic assessment, not an independently calibrated difficulty rating.'}`)};
+$('importBtn').onclick=()=>{$('importPanel').hidden=false;$('importText').focus()};
+$('importCancel').onclick=()=>{$('importPanel').hidden=true};
+$('importApply').onclick=()=>{const raw=$('importText').value.replace(/[\s|,;\-]/g,'').replace(/\./g,'0');if(!/^[0-9]{81}$/.test(raw)){$('importStatus').textContent='Please enter exactly 81 digits (0 or . for blanks).';return}const p=[...raw].map(Number);if(!valid(p)){$('importStatus').textContent='The clues conflict in a row, column or box.';return}const solutions=solve(p,2);if(solutions.length!==1){$('importStatus').textContent=solutions.length?'Multiple solutions found. Add more clues.':'No solution found. Check the clues.';return}if(!confirm('Replace your current puzzle with this imported puzzle?'))return;startPuzzle({p,solution:solutions[0]},'custom','import');$('importPanel').hidden=true;$('importStatus').textContent=''};
+$('reset').onclick=()=>{if(confirm('Restart this puzzle?')){push();state.values=state.puzzle.slice();state.notes=Array.from({length:81},()=>[]);message('Puzzle restarted.');render()}};$('statsBtn').onclick=()=>{$('statsPanel').hidden=!$('statsPanel').hidden;statsShow()};$('closeStats').onclick=()=>{$('statsPanel').hidden=true};$('settingsBtn').onclick=()=>{$('settingsPanel').hidden=!$('settingsPanel').hidden};$('closeProof').onclick=()=>{explanations=[];highlights=[];rejected=[];assumptions=[];proofValues=null;proofFocus=-1;proofRemoved=[];$('explanation').textContent='Select a cell and number to start a new explanation.';renderExplanation()};$('showCandidates').onclick=()=>{showCandidates=!showCandidates;$('showCandidates').textContent=`Candidates: ${showCandidates?'on':'off'}`;render()};$('autoNotes').onclick=()=>{push();for(let i=0;i<81;i++)if(!state.values[i])state.notes[i]=candidates(state.values,i);render()};$('clearNotes').onclick=()=>{push();state.notes=Array.from({length:81},()=>[]);render()};for(const id of ['showErrors','sameDigits','darkMode','autoRemoveNotes'])$(id).onchange=()=>{document.body.classList.toggle('dark',$('darkMode').checked);render()};$('notes').onclick=()=>{noteMode=!noteMode;render()};$('erase').onclick=()=>{if(state.puzzle[selected])return;push();state.values[selected]=0;state.notes[selected]=[];render()};$('undo').onclick=()=>{if(!undo.length)return;redo.push(snapshot());Object.assign(state,JSON.parse(undo.pop()));render()};$('redo').onclick=()=>{if(!redo.length)return;undo.push(snapshot());Object.assign(state,JSON.parse(redo.pop()));render()};$('hint').onclick=()=>{statAdd('hints');advancedHint()};$('advanced').onclick=()=>{statAdd('advanced');const a=state.values.slice();if(!valid(a))return message('Resolve duplicate entries before a walkthrough.');const wrong=range.filter(i=>a[i]&&!state.puzzle[i]&&a[i]!==state.solution[i]);if(wrong.length)return message('Correct earlier incorrect entries first.',wrong);const out=logicEngine(a,160);const k=out.trace.findIndex(t=>!['Naked single','Hidden single'].includes(t.kind));if(k<0)return message('No advanced elimination is currently needed or found. The available moves are singles; use Hint for the next deduction.');const trail=out.trace.slice(0,k+1).map((t,j)=>({text:`Step ${j+1} of ${k+1}: ${t.text}\n\nPurple numbers are temporary deductions in this walkthrough; your real board is unchanged.`,hl:t.hl,board:t.board,focus:t.removed?.[0]?.i??-1,removedAll:t.removedAll}));setSteps(trail)};$('explain').onclick=()=>{statAdd('explanations');explain(selected,chosen)};$('previous').onclick=()=>{if(step>0){step--;renderExplanation()}};$('next').onclick=()=>{if(step<explanations.length-1){step++;renderExplanation()}};$('automatic').onchange=save;$('check').onchange=render;$('difficulty').onchange=()=>{};for(let n=1;n<=9;n++){let b=document.createElement('button');b.textContent=n;b.dataset.n=n;b.onclick=()=>input(n);$('numbers').appendChild(b)}document.addEventListener('keydown',e=>{if(e.target.matches('select,input'))return;if(/^[1-9]$/.test(e.key)){input(Number(e.key))}else if(e.key==='Backspace'||e.key==='Delete')$('erase').click();else if(e.key==='ArrowRight'){selected=(selected+1)%81;render()}else if(e.key==='ArrowLeft'){selected=(selected+80)%81;render()}else if(e.key==='ArrowDown'){selected=(selected+9)%81;render()}else if(e.key==='ArrowUp'){selected=(selected+72)%81;render()}});try{let s=JSON.parse((localStorage.getItem('sudokuTutorV12')||localStorage.getItem('sudokuTutorV11')||localStorage.getItem('sudokuTutorV10')||localStorage.getItem('sudokuTutorV9')||localStorage.getItem('sudokuTutorV8')||localStorage.getItem('sudokuTutorV7')||localStorage.getItem('sudokuTutorV6')||localStorage.getItem('sudokuTutorV5')||localStorage.getItem('sudokuTutorV4')));if(s?.state?.values?.length===81&&s.state.solution?.length===81){state=s.state;showCandidates=!!s.showCandidates;mistakes=s.mistakes||0;$('showCandidates').textContent=`Candidates: ${showCandidates?'on':'off'}`;$('showErrors').checked=s.showErrors!==false;$('sameDigits').checked=s.sameDigits!==false;$('darkMode').checked=!!s.darkMode;$('autoRemoveNotes').checked=s.autoRemoveNotes!==false;document.body.classList.toggle('dark',$('darkMode').checked);selected=s.selected??0;chosen=s.chosen??2;noteMode=!!s.noteMode;$('automatic').checked=!!s.automatic;$('check').checked=s.check!==false;$('difficulty').value=state.level||'medium';message('Your saved puzzle is ready.');render()}else newGame()}catch(e){newGame()}if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));})();
+</script></body></html>
